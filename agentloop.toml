@@ -1,0 +1,52 @@
+[project]
+path = "/Users/baxrom/ish_full/burxon"
+brief_file = "ai-orchestrator-template/PROJECT_BRIEF.md"
+# Test buyruqlari - har bir repo uchun alohida
+# Backend: cd api_school_device && uv run pytest -q
+# Dashboard: cd school_device_dashboard && bun run build
+# Member App: cd school_device_member_app && bun run build
+# ESP32: cd esp32_firmware && pio run
+test_command = "cd ../api_school_device && uv run pytest -q --no-header 2>/dev/null; cd ../school_device_dashboard && bun run build 2>&1 | tail -5; cd ../school_device_member_app && bun run build 2>&1 | tail -5"
+logs_dir = ".agentloop/runs"
+
+[loop]
+# Katta loyiha - 5 phase, ko'p fayllar
+plan_cycles = 5
+review_cycles = 3
+build_iterations = 8
+no_change_limit = 3
+sleep_between_rounds_sec = 2
+max_total_builds = 80
+max_discovery_rounds = 3
+
+[kiro]
+# Planner + Reviewer (Opus 4.7 - arxitektura va review uchun)
+enabled = true
+command = "kiro-cli"
+agent = "ai-planner"
+timeout_sec = 3600
+resume = false
+trust_tools = ""
+trust_all_tools = true
+require_mcp_startup = false
+
+[kiro_builder]
+# Builder (Opus 4.7 - kod yozish uchun)
+enabled = true
+command = "kiro-cli"
+agent = "ai-builder"
+timeout_sec = 7200
+trust_tools = "read,write,grep,shell"
+trust_all_tools = true
+
+[telegram]
+# Telegram xabarnomalar - progress tracking uchun
+enabled = true
+bot_token = "8860807129:AAF0p6MJbHeARftMYoL1JLcB6nGy2js8Iuw"
+chat_id = "5146421024"
+
+[git]
+# Har build dan keyin avtomatik push
+auto_push = false
+branch = "ai-orchestrator/full-fix"
+commit_message = "feat: AI orchestrator - school device system improvements"
