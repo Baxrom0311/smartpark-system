@@ -113,12 +113,35 @@ class TelegramNotifier:
         status = "Tugallandi ✅" if done else "To'xtadi ⚠️"
         reason = str(summary.get("reason", ""))
         clean_reason = _extract_meaningful(reason)
+        cost_info = summary.get("cost", {})
+        metrics_info = summary.get("metrics", {})
+        cost_str = f"  • Cost: ${cost_info.get('total_cost_usd', 0):.2f}" if cost_info else ""
+        metrics_str = ""
+        if metrics_info:
+            metrics_str = (
+                f"  • Duration: {metrics_info.get('total_duration_sec', 0):.0f}s\n"
+                f"  • Review pass rate: {metrics_info.get('review_pass_rate', 0):.0%}\n"
+                f"  • Files changed: {metrics_info.get('total_files_changed', 0)}"
+            )
         self.send(
             f"{emoji} *{status}*\n\n"
             f"📊 Natija:\n"
             f"  • Plan cycles: {summary.get('plan_cycles_completed')}\n"
-            f"  • Total builds: {summary.get('total_build_iterations')}\n\n"
-            f"💬 {_esc(clean_reason[:500])}"
+            f"  • Total builds: {summary.get('total_build_iterations')}\n"
+            f"{cost_str}\n{metrics_str}\n\n"
+            f"💬 {_esc(clean_reason[:400])}"
+        )
+
+    def notify_budget_warning(self, current: float, limit: float, pct: float) -> None:
+        self.send(
+            f"⚠️ *Budget ogohlantirish*\n\n"
+            f"💰 ${current:.2f} / ${limit:.2f} ({pct:.0f}%)"
+        )
+
+    def notify_retry(self, agent: str, attempt: int, max_attempts: int, error: str) -> None:
+        self.send(
+            f"🔄 *Retry* {agent} ({attempt}/{max_attempts})\n\n"
+            f"Xato: `{_esc(error[:200])}`"
         )
 
 

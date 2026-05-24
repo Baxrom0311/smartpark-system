@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
-"""AI Agent Orchestrator — Kiro Planner + Codex Builder
+"""AI Agent Orchestrator — Kiro Planner + Builder + Reviewer
 
 Three-level nested loop:
   Outer:  Kiro plan cycles            (plan_cycles, default 3)
-  Middle: Codex-Kiro review cycles    (review_cycles, default 5)
-  Inner:  Codex build iterations      (build_iterations, default 10)
+  Middle: Build-review cycles         (review_cycles, default 5)
+  Inner:  Build iterations            (build_iterations, default 10)
 
-Each level supports early stopping based on AI output:
-  - Inner: stops if builder reports complete or no files change
-  - Middle: stops if Kiro review verdict is "pass"
-  - Outer: stops if Kiro replan marks done
+Features:
+  - Checkpoint/Resume: crash dan keyin davom ettirish (--resume)
+  - Error retry with exponential backoff
+  - Cost/Budget tracking with warnings
+  - Multi-model support (planner/builder/reviewer alohida model)
+  - Separate reviewer agent
+  - Metrics & observability (duration, tokens, pass rate)
 
 Roles:
-  - Kiro (Opus): Planner + Reviewer
-  - Codex: Builder / Code writer
+  - Kiro (ai-planner): Planner (Opus)
+  - Kiro (ai-builder): Builder (Opus/Sonnet)
+  - Kiro (ai-reviewer): Reviewer (Opus/Haiku)
 
 Telegram bot notifications keep you informed without watching the terminal.
 """
@@ -21,11 +25,13 @@ Telegram bot notifications keep you informed without watching the terminal.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import dataclasses
 import datetime as dt
 import hashlib
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -44,6 +50,7 @@ _parent = str(Path(__file__).resolve().parent)
 if _parent not in sys.path:
     sys.path.insert(0, _parent)
 from telegram_notifier import TelegramNotifier
+from context_store import ContextStore
 
 
 # ── Data classes ───────────────────────────────────────────────────
@@ -94,6 +101,44 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "sleep_between_rounds_sec": 1,
         "max_total_builds": 50,
         "max_discovery_rounds": 2,
+        "parallel_review": False,  # Run review + test in parallel (safe, read-only)
+    },
+    "retry": {
+        "max_attempts": 3,
+        "backoff_base": 2,
+        "backoff_max": 60,
+        "jitter": True,
+    },
+    "budget": {
+        "max_cost_usd": 0,  # 0 = unlimited
+        "warn_at_pct": 80,
+        "cost_per_build_usd": 0.15,  # taxminiy
+        "cost_per_review_usd": 0.05,
+        "cost_per_plan_usd": 0.10,
+    },
+    "agents": {
+        "planner": {
+            "command": "kiro-cli",
+            "agent": "ai-planner",
+            "timeout_sec": 3600,
+            "trust_all_tools": True,
+            "trust_tools": "",
+            "require_mcp_startup": False,
+        },
+        "builder": {
+            "command": "kiro-cli",
+            "agent": "ai-builder",
+            "timeout_sec": 7200,
+            "trust_all_tools": True,
+            "trust_tools": "read,write,grep,shell",
+        },
+        "reviewer": {
+            "command": "kiro-cli",
+            "agent": "ai-reviewer",
+            "timeout_sec": 3600,
+            "trust_all_tools": True,
+            "trust_tools": "",
+        },
     },
     "kiro": {
         "enabled": True,
@@ -190,6 +235,153 @@ def trim(text: str, limit: int = 20000) -> str:
     return text[:half] + "\n...[middle truncated by orchestrator]...\n" + text[-half:]
 
 
+# ── Retry with exponential backoff ─────────────────────────────────
+
+def retry_call(func, config: Dict[str, Any], name: str = "agent") -> CommandResult:
+    """Retry a function that returns CommandResult with exponential backoff."""
+    retry_cfg = config.get("retry", {})
+    max_attempts = int(retry_cfg.get("max_attempts", 3))
+    backoff_base = float(retry_cfg.get("backoff_base", 2))
+    backoff_max = float(retry_cfg.get("backoff_max", 60))
+    jitter = retry_cfg.get("jitter", True)
+
+    for attempt in range(1, max_attempts + 1):
+        result = func()
+        # Success or non-retryable (non-timeout, non-crash)
+        if result.ok:
+            return result
+        if not result.timed_out and result.returncode not in (124, 137, -9, -15):
+            return result  # logic error, don't retry
+        if attempt == max_attempts:
+            print(f"    [retry] {name} failed after {max_attempts} attempts")
+            return result
+        delay = min(backoff_base ** attempt, backoff_max)
+        if jitter:
+            delay += random.uniform(0, delay * 0.3)
+        print(f"    [retry] {name} attempt {attempt} failed (rc={result.returncode}), retrying in {delay:.1f}s...")
+        time.sleep(delay)
+    return result  # type: ignore[possibly-undefined]
+
+
+# ── Cost / Budget tracker ──────────────────────────────────────────
+
+class CostTracker:
+    """Track estimated costs and enforce budget limits."""
+
+    def __init__(self, config: Dict[str, Any]):
+        budget = config.get("budget", {})
+        self.max_cost = float(budget.get("max_cost_usd", 0))
+        self.warn_pct = float(budget.get("warn_at_pct", 80))
+        self.cost_build = float(budget.get("cost_per_build_usd", 0.15))
+        self.cost_review = float(budget.get("cost_per_review_usd", 0.05))
+        self.cost_plan = float(budget.get("cost_per_plan_usd", 0.10))
+        self.total_cost = 0.0
+        self.warned = False
+
+    def add(self, op_type: str) -> None:
+        costs = {"build": self.cost_build, "review": self.cost_review, "plan": self.cost_plan}
+        self.total_cost += costs.get(op_type, 0.0)
+
+    def check(self) -> Tuple[bool, str]:
+        """Returns (over_budget, message)."""
+        if self.max_cost <= 0:
+            return False, ""
+        pct = (self.total_cost / self.max_cost) * 100
+        if pct >= 100:
+            return True, f"Budget exhausted: ${self.total_cost:.2f}/${self.max_cost:.2f}"
+        if pct >= self.warn_pct and not self.warned:
+            self.warned = True
+            return False, f"Budget warning: ${self.total_cost:.2f}/${self.max_cost:.2f} ({pct:.0f}%)"
+        return False, ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"total_cost_usd": round(self.total_cost, 4), "max_cost_usd": self.max_cost}
+
+
+# ── Metrics collector ──────────────────────────────────────────────
+
+class MetricsCollector:
+    """Collect per-build and aggregate metrics."""
+
+    def __init__(self):
+        self.builds: List[Dict[str, Any]] = []
+        self.reviews: List[Dict[str, Any]] = []
+        self.start_time = time.monotonic()
+
+    def record_build(self, plan_cycle: int, review_cycle: int, build_iter: int,
+                     duration: float, files_changed: List[str], success: bool) -> None:
+        self.builds.append({
+            "plan_cycle": plan_cycle, "review_cycle": review_cycle,
+            "build_iter": build_iter, "duration_sec": round(duration, 2),
+            "files_changed": files_changed, "success": success,
+            "timestamp": dt.datetime.now().isoformat(),
+        })
+
+    def record_review(self, plan_cycle: int, review_cycle: int,
+                      verdict: str, duration: float) -> None:
+        self.reviews.append({
+            "plan_cycle": plan_cycle, "review_cycle": review_cycle,
+            "verdict": verdict, "duration_sec": round(duration, 2),
+            "timestamp": dt.datetime.now().isoformat(),
+        })
+
+    def summary(self) -> Dict[str, Any]:
+        total_dur = time.monotonic() - self.start_time
+        pass_count = sum(1 for r in self.reviews if r["verdict"] == "pass")
+        return {
+            "total_duration_sec": round(total_dur, 2),
+            "total_builds": len(self.builds),
+            "total_reviews": len(self.reviews),
+            "review_pass_rate": round(pass_count / max(len(self.reviews), 1), 2),
+            "avg_build_duration": round(
+                sum(b["duration_sec"] for b in self.builds) / max(len(self.builds), 1), 2
+            ),
+            "total_files_changed": len(set(
+                f for b in self.builds for f in b["files_changed"]
+            )),
+        }
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"builds": self.builds, "reviews": self.reviews, "summary": self.summary()}
+
+
+# ── Checkpoint / Resume ────────────────────────────────────────────
+
+class Checkpoint:
+    """Save and restore orchestrator state for crash recovery."""
+
+    def __init__(self, run_dir: Path):
+        self.path = run_dir / "run_state.json"
+
+    def save(self, state: Dict[str, Any]) -> None:
+        state["_saved_at"] = dt.datetime.now().isoformat()
+        write_text(self.path, json.dumps(state, indent=2, default=str))
+
+    def load(self) -> Optional[Dict[str, Any]]:
+        text = read_text(self.path)
+        if not text:
+            return None
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return None
+
+    @staticmethod
+    def find_latest(logs_base: Path) -> Optional[Path]:
+        """Find the most recent run directory with a checkpoint."""
+        if not logs_base.exists():
+            return None
+        runs = sorted(logs_base.iterdir(), reverse=True)
+        for run in runs:
+            if (run / "run_state.json").exists():
+                state = read_text(run / "run_state.json")
+                if state:
+                    data = json.loads(state)
+                    if not data.get("done", False):
+                        return run
+        return None
+
+
 # ── Shell & process helpers ────────────────────────────────────────
 
 def run_command(
@@ -267,6 +459,21 @@ def write_result(path: Path, result: CommandResult) -> None:
 
 def preflight(config: Dict[str, Any], project_root: Path, run_dir: Path) -> None:
     checks: List[Dict[str, Any]] = []
+
+    # Check new [agents.*] config
+    agents_cfg = config.get("agents", {})
+    for role in ("planner", "builder", "reviewer"):
+        acfg = agents_cfg.get(role, {})
+        cmd = str(acfg.get("command", "kiro-cli"))
+        agent_name = acfg.get("agent", f"ai-{role}")
+        agent_file = project_root / ".kiro" / "agents" / f"{agent_name}.json"
+        checks.append({
+            "component": f"agents.{role}", "command": cmd,
+            "agent": agent_name, "agent_file_exists": agent_file.exists(),
+            "ok": command_exists(cmd) and agent_file.exists(),
+        })
+
+    # Legacy checks
     for section in ("kiro", "kiro_builder"):
         cfg = config.get(section, {})
         if not cfg.get("enabled", False):
@@ -277,27 +484,28 @@ def preflight(config: Dict[str, Any], project_root: Path, run_dir: Path) -> None
             "component": section, "enabled": True,
             "command": cmd, "ok": command_exists(cmd),
         })
-    if config.get("kiro", {}).get("enabled") and not os.environ.get("KIRO_API_KEY"):
-        checks.append({
-            "component": "kiro-auth", "ok": False,
-            "note": "KIRO_API_KEY is not set.",
-        })
+
     checks.append({
         "component": "git", "ok": (project_root / ".git").exists() or any(
             (d / ".git").exists() for d in project_root.iterdir() if d.is_dir()
         ),
-        "note": "recommended; Codex may require a Git repository",
+        "note": "recommended for change tracking",
     })
+    checks.append({
+        "component": "brief", "ok": (project_root / str(config["project"].get("brief_file", "PROJECT_BRIEF.md"))).exists(),
+    })
+
     write_text(run_dir / "preflight.json", json.dumps(checks, indent=2))
     hard_fail = [
         c for c in checks
-        if c.get("component") in {"kiro", "kiro_builder"} and not c.get("ok")
+        if c.get("component", "").startswith("agents.") and not c.get("ok")
     ]
     if hard_fail:
-        names = ", ".join(c["component"] for c in hard_fail)
-        raise OrchestratorError(
-            f"Missing CLI(s): {names}. See {run_dir / 'preflight.json'}"
+        details = "; ".join(
+            f"{c['component']}(cmd={c.get('command')}, file={c.get('agent_file_exists')})"
+            for c in hard_fail
         )
+        raise OrchestratorError(f"Preflight failed: {details}. See {run_dir / 'preflight.json'}")
 
 
 # ── Repo inspection ───────────────────────────────────────────────
@@ -377,6 +585,38 @@ def worktree_hash(project_root: Path) -> str:
 
 # ── Agent wrappers ─────────────────────────────────────────────────
 
+def _build_kiro_cmd(agent_cfg: Dict[str, Any]) -> List[str]:
+    """Build kiro-cli command from agent config."""
+    cmd = [str(agent_cfg.get("command", "kiro-cli")), "chat", "--no-interactive"]
+    if agent_cfg.get("agent"):
+        cmd.extend(["--agent", str(agent_cfg["agent"])])
+    if agent_cfg.get("require_mcp_startup"):
+        cmd.append("--require-mcp-startup")
+    if agent_cfg.get("trust_all_tools"):
+        cmd.append("--trust-all-tools")
+    elif agent_cfg.get("trust_tools"):
+        cmd.append("--trust-tools=" + str(agent_cfg["trust_tools"]))
+    return cmd
+
+
+def _get_agent_cfg(config: Dict[str, Any], role: str) -> Dict[str, Any]:
+    """Get agent config — prefer new [agents.X] format, fallback to legacy."""
+    agents = config.get("agents", {})
+    if role in agents and agents[role].get("command"):
+        return agents[role]
+    # Legacy fallback
+    if role == "planner":
+        return config.get("kiro", {})
+    elif role == "builder":
+        return config.get("kiro_builder", {})
+    elif role == "reviewer":
+        # Fallback: use planner config with reviewer agent
+        cfg = dict(config.get("kiro", {}))
+        cfg["agent"] = "ai-reviewer"
+        return cfg
+    return config.get("kiro", {})
+
+
 def run_tests(config: Dict[str, Any], project_root: Path, log_dir: Path) -> Tuple[bool, str]:
     command = str(config["project"].get("test_command", "")).strip()
     if not command:
@@ -389,18 +629,9 @@ def run_tests(config: Dict[str, Any], project_root: Path, log_dir: Path) -> Tupl
 def kiro_planner(
     config: Dict[str, Any], project_root: Path, prompt: str,
 ) -> CommandResult:
-    """Kiro used as planner/reviewer (read-only, Opus model)."""
-    cfg = config["kiro"]
-    cmd = [str(cfg.get("command", "kiro-cli")), "chat", "--no-interactive"]
-    if cfg.get("agent"):
-        cmd.extend(["--agent", str(cfg["agent"])])
-    if cfg.get("require_mcp_startup"):
-        cmd.append("--require-mcp-startup")
-    if cfg.get("trust_all_tools"):
-        cmd.append("--trust-all-tools")
-    elif cfg.get("trust_tools"):
-        cmd.append("--trust-tools=" + str(cfg["trust_tools"]))
-    # Pass prompt as the [INPUT] argument
+    """Kiro used as planner (read-only, Opus model)."""
+    cfg = _get_agent_cfg(config, "planner")
+    cmd = _build_kiro_cmd(cfg)
     cmd.append(prompt)
     return run_command(
         "kiro-planner", cmd, cwd=project_root,
@@ -409,18 +640,23 @@ def kiro_planner(
 
 
 def kiro_builder(config: Dict[str, Any], project_root: Path, prompt: str) -> CommandResult:
-    """Kiro used as the builder/code writer (Opus 4.7 with write tools)."""
-    cfg = config["kiro_builder"]
-    cmd = [str(cfg.get("command", "kiro-cli")), "chat", "--no-interactive"]
-    if cfg.get("agent"):
-        cmd.extend(["--agent", str(cfg["agent"])])
-    if cfg.get("trust_all_tools"):
-        cmd.append("--trust-all-tools")
-    elif cfg.get("trust_tools"):
-        cmd.append("--trust-tools=" + str(cfg["trust_tools"]))
+    """Kiro used as the builder/code writer."""
+    cfg = _get_agent_cfg(config, "builder")
+    cmd = _build_kiro_cmd(cfg)
     cmd.append(prompt)
     return run_command(
         "kiro-builder", cmd, cwd=project_root,
+        timeout_sec=int(cfg.get("timeout_sec", 7200)),
+    )
+
+
+def kiro_reviewer(config: Dict[str, Any], project_root: Path, prompt: str) -> CommandResult:
+    """Kiro used as separate reviewer (read-only, can use faster/cheaper model)."""
+    cfg = _get_agent_cfg(config, "reviewer")
+    cmd = _build_kiro_cmd(cfg)
+    cmd.append(prompt)
+    return run_command(
+        "kiro-reviewer", cmd, cwd=project_root,
         timeout_sec=int(cfg.get("timeout_sec", 3600)),
     )
 
@@ -573,6 +809,8 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
     parser.add_argument("--build-iterations", type=int, default=None, help="Override loop.build_iterations.")
     parser.add_argument("--dry-run", action="store_true", help="Write prompts but skip AI CLI calls.")
     parser.add_argument("--skip-preflight", action="store_true", help="Skip CLI/env checks.")
+    parser.add_argument("--resume", nargs="?", const="latest", default=None,
+                        help="Resume from checkpoint. Use 'latest' or path to run dir.")
     args = parser.parse_args(argv)
 
     # ── Config ──
@@ -591,8 +829,27 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
 
     project_root = ensure_project_root(Path(config["project"]["path"]))
     logs_base = project_root / str(config["project"].get("logs_dir", ".agentloop/runs"))
-    run_dir = logs_base / now_slug()
-    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Resume or new run ──
+    resumed_state: Optional[Dict[str, Any]] = None
+    if args.resume:
+        if args.resume == "latest":
+            resume_dir = Checkpoint.find_latest(logs_base)
+        else:
+            resume_dir = Path(args.resume).expanduser().resolve()
+        if resume_dir and (resume_dir / "run_state.json").exists():
+            run_dir = resume_dir
+            ckpt = Checkpoint(run_dir)
+            resumed_state = ckpt.load()
+            print(f"[agentloop] Resuming from: {run_dir}")
+        else:
+            print("[agentloop] No checkpoint found, starting fresh.")
+            run_dir = logs_base / now_slug()
+            run_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        run_dir = logs_base / now_slug()
+        run_dir.mkdir(parents=True, exist_ok=True)
+
     write_text(run_dir / "effective_config.json", json.dumps(config, indent=2))
 
     if not args.skip_preflight and not args.dry_run:
@@ -613,6 +870,12 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
         enabled=tg_cfg.get("enabled", False),
     )
 
+    # ── Initialize trackers ──
+    cost = CostTracker(config)
+    metrics = MetricsCollector()
+    checkpoint = Checkpoint(run_dir)
+    ctx_store = ContextStore(run_dir)
+
     # ── Loop parameters ──
     plan_cycles = int(config["loop"].get("plan_cycles", 3))
     review_cycles = int(config["loop"].get("review_cycles", 5))
@@ -625,25 +888,45 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
     kiro_enabled = config["kiro"].get("enabled", True)
     kiro_builder_enabled = config["kiro_builder"].get("enabled", True)
 
+    # ── State (restore from checkpoint if resuming) ──
+    if resumed_state:
+        kiro_plan = resumed_state.get("kiro_plan", "")
+        done = resumed_state.get("done", False)
+        final_reason = resumed_state.get("final_reason", "Max plan cycles reached.")
+        total_builds = resumed_state.get("total_builds", 0)
+        discovery_rounds = resumed_state.get("discovery_rounds", 0)
+        start_pc = resumed_state.get("plan_cycle", 1)
+        start_rc = resumed_state.get("review_cycle", 1)
+        start_bi = resumed_state.get("build_iteration", 1)
+        cost.total_cost = resumed_state.get("total_cost_usd", 0.0)
+        kiro_feedback = resumed_state.get("kiro_feedback", "")
+        print(f"[agentloop] Resumed: pc={start_pc} rc={start_rc} bi={start_bi} builds={total_builds}")
+    else:
+        kiro_plan = ""
+        done = False
+        final_reason = "Max plan cycles reached."
+        total_builds = 0
+        discovery_rounds = 0
+        start_pc = 1
+        start_rc = 1
+        start_bi = 1
+        kiro_feedback = ""
+
+    pc = 0
+
     print(f"[agentloop] project: {project_root}")
     print(f"[agentloop] logs:    {run_dir}")
     print(f"[agentloop] cycles:  plan={plan_cycles}  review={review_cycles}  build={build_iterations}")
-    print(f"[agentloop] roles:   Kiro=planner+reviewer+builder (Opus 4.7)")
+    print(f"[agentloop] roles:   planner=ai-planner  builder=ai-builder  reviewer=ai-reviewer")
+    if config.get("budget", {}).get("max_cost_usd", 0) > 0:
+        print(f"[agentloop] budget:  ${config['budget']['max_cost_usd']:.2f}")
 
     tg.notify_start(project_root.name, plan_cycles, review_cycles, build_iterations)
-
-    # ── State ──
-    kiro_plan = ""
-    done = False
-    final_reason = "Max plan cycles reached."
-    total_builds = 0
-    discovery_rounds = 0
-    pc = 0  # plan cycle counter (set properly in loop)
 
     # ═══════════════════════════════════════════════════════════════
     #  OUTER LOOP: Kiro plan cycles
     # ═══════════════════════════════════════════════════════════════
-    for pc in range(1, plan_cycles + 1):
+    for pc in range(start_pc, plan_cycles + 1):
         plan_dir = run_dir / f"plan_{pc:02d}"
         plan_dir.mkdir(parents=True, exist_ok=True)
 
@@ -651,8 +934,8 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
         print(f"[agentloop] PLAN CYCLE {pc}/{plan_cycles}")
         print(f"{'=' * 60}")
 
-        # ── Kiro initial plan (cycle 1 only) ──
-        if pc == 1:
+        # ── Kiro initial plan (cycle 1 only, skip if resumed with plan) ──
+        if pc == 1 and not kiro_plan:
             if kiro_enabled:
                 plan_prompt = render_template(
                     prompts_dir / "planner_kiro.md", brief=brief,
@@ -661,11 +944,15 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                 if args.dry_run:
                     kiro_plan = "DRY RUN: Kiro planner not executed."
                 else:
-                    result = kiro_planner(config, project_root, plan_prompt)
+                    result = retry_call(
+                        lambda: kiro_planner(config, project_root, plan_prompt),
+                        config, "planner"
+                    )
                     write_result(plan_dir / "kiro_plan_output.md", result)
                     kiro_plan = result.combined(limit=30000)
+                    cost.add("plan")
             else:
-                kiro_plan = brief  # Use brief as the plan when Kiro is disabled
+                kiro_plan = brief
             tg.notify_plan(pc, plan_cycles, kiro_plan[:500])
 
         # For pc > 1: kiro_plan was updated by previous cycle's replan.
@@ -673,14 +960,15 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
             write_text(plan_dir / "kiro_plan_carried.md", kiro_plan)
             tg.notify_plan(pc, plan_cycles, kiro_plan[:500])
 
-        kiro_feedback = ""
+        kiro_feedback = kiro_feedback if (pc == start_pc and kiro_feedback) else ""
         review_history: List[Dict[str, Any]] = []
         last_test_output = ""
 
         # ═══════════════════════════════════════════════════════════
-        #  MIDDLE LOOP: Codex build + Kiro review cycles
+        #  MIDDLE LOOP: Build + Review cycles
         # ═══════════════════════════════════════════════════════════
-        for rc in range(1, review_cycles + 1):
+        _rc_start = start_rc if pc == start_pc else 1
+        for rc in range(_rc_start, review_cycles + 1):
             review_dir = plan_dir / f"review_{rc:02d}"
             review_dir.mkdir(parents=True, exist_ok=True)
 
@@ -693,12 +981,25 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
             builds_completed = 0
 
             # ═══════════════════════════════════════════════════════
-            #  INNER LOOP: Codex build iterations
+            #  INNER LOOP: Build iterations
             # ═══════════════════════════════════════════════════════
-            for bi in range(1, build_iterations + 1):
+            _bi_start = start_bi if (pc == start_pc and rc == _rc_start) else 1
+            for bi in range(_bi_start, build_iterations + 1):
                 total_builds += 1
                 builds_completed = bi
                 print(f"    [agentloop] Build {bi}/{build_iterations}  (total #{total_builds})")
+
+                # Budget check
+                over, msg = cost.check()
+                if over:
+                    print(f"    [agentloop] {msg}")
+                    tg.send(f"💰 {msg}")
+                    done = True
+                    final_reason = msg
+                    break
+                elif msg:
+                    print(f"    [agentloop] ⚠️ {msg}")
+                    tg.send(f"⚠️ {msg}")
 
                 # Safety: max total builds limit
                 if total_builds > max_total_builds:
@@ -719,7 +1020,7 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                         previous_feedback=trim(kiro_feedback, 30000),
                         previous_builder_output=trim(builder_output, 16000),
                         repo_snapshot=trim(snapshot, 24000),
-                        next_prompt_override="",
+                        next_prompt_override=ctx_store.get_context_summary(2000),
                     )
                 else:
                     # Continue: lighter prompt
@@ -740,6 +1041,7 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     builder_output = "DRY RUN or builder disabled: not executed."
                 else:
                     hash_before = worktree_hash(project_root)
+                    build_start = time.monotonic()
                     # Detect sub-repos for parallel build
                     sub_repos = sorted(
                         d.name for d in project_root.iterdir()
@@ -749,9 +1051,14 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     if len(sub_repos) > 1 and bi > 1:
                         result = kiro_builder_parallel(config, project_root, build_prompt, sub_repos)
                     else:
-                        result = kiro_builder(config, project_root, build_prompt)
+                        result = retry_call(
+                            lambda: kiro_builder(config, project_root, build_prompt),
+                            config, "builder"
+                        )
+                    build_duration = time.monotonic() - build_start
                     write_result(review_dir / f"build_{bi:02d}_output.md", result)
                     builder_output = result.combined(limit=40000)
+                    cost.add("build")
 
                     if not result.ok:
                         builder_output += (
@@ -761,18 +1068,32 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     # No-change detection
                     hash_after = worktree_hash(project_root)
                     report = extract_json_object(result.stdout or "")
-                    builder_reports_changes = (
-                        report and report.get("files_changed")
-                        and len(report["files_changed"]) > 0
-                    )
+                    files_changed = (report.get("files_changed", []) if report else [])
+                    builder_reports_changes = bool(files_changed)
+
                     if hash_before == hash_after and not builder_reports_changes:
                         no_change_streak += 1
                         print(f"    [agentloop] No change (streak: {no_change_streak})")
                     else:
                         no_change_streak = 0
                         if builder_reports_changes:
-                            print(f"    [agentloop] Builder changed: {report['files_changed'][:3]}")
-                            tg.notify_build_progress(pc, rc, total_builds, report["files_changed"])
+                            print(f"    [agentloop] Builder changed: {files_changed[:3]}")
+                            tg.notify_build_progress(pc, rc, total_builds, files_changed)
+
+                    # Record metrics
+                    metrics.record_build(pc, rc, bi, build_duration, files_changed, result.ok)
+
+                    # Update context store from builder report
+                    ctx_store.update_from_builder_report(report)
+
+                    # Save checkpoint after each build
+                    checkpoint.save({
+                        "plan_cycle": pc, "review_cycle": rc, "build_iteration": bi + 1,
+                        "total_builds": total_builds, "kiro_plan": kiro_plan[:5000],
+                        "kiro_feedback": kiro_feedback[:2000], "done": False,
+                        "final_reason": final_reason, "discovery_rounds": discovery_rounds,
+                        "total_cost_usd": cost.total_cost,
+                    })
 
                     if no_change_streak >= no_change_limit:
                         print("    [agentloop] No-change limit hit — ending build phase")
@@ -806,14 +1127,28 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
             # ── End of build iterations ──
             tg.notify_build_done(pc, rc, builds_completed)
 
-            # ── Run tests ──
-            tests_ok, test_output = run_tests(config, project_root, review_dir)
+            # Budget/limit reached — skip review and break middle loop
+            if done:
+                break
+
+            # ── Run tests + collect snapshot (parallel if enabled) ──
+            parallel_review = config["loop"].get("parallel_review", False)
+            if parallel_review and not args.dry_run:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+                    test_future = ex.submit(run_tests, config, project_root, review_dir)
+                    snap_future = ex.submit(collect_repo_snapshot, project_root, "")
+                    tests_ok, test_output = test_future.result()
+                    snapshot_after = snap_future.result()
+                # Re-collect with test output for full snapshot
+                snapshot_after = collect_repo_snapshot(project_root, test_output)
+            else:
+                tests_ok, test_output = run_tests(config, project_root, review_dir)
+                snapshot_after = collect_repo_snapshot(project_root, test_output)
             last_test_output = test_output
 
-            # ── Kiro review ──
+            # ── Kiro review (separate reviewer agent) ──
             kiro_verdict = "unknown"
             if kiro_enabled:
-                snapshot_after = collect_repo_snapshot(project_root, test_output)
                 review_prompt = render_template(
                     prompts_dir / "review_kiro.md",
                     round_no=str(rc),
@@ -827,17 +1162,27 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                 if args.dry_run:
                     kiro_feedback = "DRY RUN: Kiro reviewer not executed."
                 else:
-                    result = kiro_planner(config, project_root, review_prompt)
+                    review_start = time.monotonic()
+                    result = retry_call(
+                        lambda: kiro_reviewer(config, project_root, review_prompt),
+                        config, "reviewer"
+                    )
+                    review_duration = time.monotonic() - review_start
                     write_result(review_dir / "kiro_review_output.md", result)
                     kiro_feedback = result.combined(limit=40000)
+                    cost.add("review")
 
                     verdict_json = extract_json_object(result.stdout or "")
                     if verdict_json:
                         kiro_verdict = str(verdict_json.get("verdict", "unknown"))
-                        # Extract direct builder instruction
                         bp = verdict_json.get("builder_prompt", "")
                         if bp:
                             kiro_feedback = f"DIRECT INSTRUCTION: {bp}\n\nFull review:\n{kiro_feedback}"
+
+                    metrics.record_review(pc, rc, kiro_verdict, review_duration)
+
+                    # Update context store from review
+                    ctx_store.update_from_review(verdict_json)
 
                 tg.notify_review(pc, rc, review_cycles, kiro_feedback[:300])
             else:
@@ -861,6 +1206,10 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                 time.sleep(sleep_sec)
 
         # ── End of review cycles ──
+
+        # Budget/limit reached during builds — skip replan
+        if done:
+            break
 
         # ═══════════════════════════════════════════════════════════
         #  Kiro replan (end of each plan cycle)
@@ -888,9 +1237,13 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     "next_build_iterations": build_iterations,
                 })
             else:
-                replan_result = kiro_planner(config, project_root, replan_prompt)
+                replan_result = retry_call(
+                    lambda: kiro_planner(config, project_root, replan_prompt),
+                    config, "replanner"
+                )
                 write_result(plan_dir / "kiro_replan_output.md", replan_result)
                 replan_text = replan_result.stdout or replan_result.stderr
+                cost.add("plan")
 
             replan_json = extract_json_object(replan_text)
             write_text(
@@ -940,8 +1293,12 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     test_output=trim(last_test_output, 12000),
                 )
                 write_text(plan_dir / "kiro_discovery_prompt.md", discovery_prompt)
-                discovery_result = kiro_planner(config, project_root, discovery_prompt)
+                discovery_result = retry_call(
+                    lambda: kiro_planner(config, project_root, discovery_prompt),
+                    config, "discovery"
+                )
                 write_result(plan_dir / "kiro_discovery_output.md", discovery_result)
+                cost.add("plan")
 
                 discovery_json = extract_json_object(discovery_result.stdout or "")
                 if discovery_json and discovery_json.get("new_tasks"):
@@ -973,9 +1330,23 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
         "reason": final_reason,
         "plan_cycles_completed": pc,
         "total_build_iterations": total_builds,
+        "cost": cost.to_dict(),
+        "metrics": metrics.summary(),
         "logs": str(run_dir),
     }
     write_text(run_dir / "summary.json", json.dumps(summary, indent=2))
+    write_text(run_dir / "metrics.json", json.dumps(metrics.to_dict(), indent=2))
+
+    # Final checkpoint
+    checkpoint.save({
+        "plan_cycle": pc, "review_cycle": review_cycles,
+        "build_iteration": 1, "total_builds": total_builds,
+        "kiro_plan": kiro_plan[:5000], "kiro_feedback": "",
+        "done": done, "final_reason": final_reason,
+        "discovery_rounds": discovery_rounds,
+        "total_cost_usd": cost.total_cost,
+    })
+
     tg.notify_done(summary)
     print(json.dumps(summary, indent=2))
 

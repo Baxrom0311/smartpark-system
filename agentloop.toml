@@ -16,10 +16,49 @@ review_cycles = 2
 build_iterations = 5
 no_change_limit = 2
 sleep_between_rounds_sec = 1
-max_total_builds = 30
-max_discovery_rounds = 1
+max_total_builds = 50
+max_discovery_rounds = 2
+parallel_review = true
 # Parallel: build 2+ dan boshlab sub-repo'larga parallel builder yuboriladi
 # Build 1 = single (plan tushunish), Build 2+ = parallel (tez ishlash)
+
+[retry]
+max_attempts = 3
+backoff_base = 2
+backoff_max = 60
+jitter = true
+
+[budget]
+# 0 = unlimited. Taxminiy narxlar (haqiqiy narx model ga bog'liq).
+max_cost_usd = 0
+warn_at_pct = 80
+cost_per_build_usd = 0.15
+cost_per_review_usd = 0.05
+cost_per_plan_usd = 0.10
+
+# ── Multi-model agent konfiguratsiyasi ──────────────────────────
+# Har bir agent uchun alohida model/timeout sozlash mumkin.
+# Agent JSON fayllarida model belgilanadi (.kiro/agents/*.json)
+
+[agents.planner]
+command = "kiro-cli"
+agent = "ai-planner"
+timeout_sec = 3600
+trust_all_tools = true
+
+[agents.builder]
+command = "kiro-cli"
+agent = "ai-builder"
+timeout_sec = 7200
+trust_all_tools = true
+
+[agents.reviewer]
+command = "kiro-cli"
+agent = "ai-reviewer"
+timeout_sec = 3600
+trust_all_tools = true
+
+# ── Legacy config (backward compatible) ─────────────────────────
 
 [kiro]
 # Planner + Reviewer (Opus 4.7 - arxitektura va review uchun)
