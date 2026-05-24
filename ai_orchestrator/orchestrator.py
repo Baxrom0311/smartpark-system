@@ -92,6 +92,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "brief_file": "PROJECT_BRIEF.md",
         "test_command": "",
         "logs_dir": ".agentloop/runs",
+        "exclude_dirs": [],
+        "snapshot_exclude": ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/"],
+        "tests": [],  # [[project.tests]] array for parallel test execution
     },
     "loop": {
         "plan_cycles": 3,
@@ -102,6 +105,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "max_total_builds": 50,
         "max_discovery_rounds": 2,
         "parallel_review": False,  # Run review + test in parallel (safe, read-only)
+        "max_parallel_builders": 3,
     },
     "retry": {
         "max_attempts": 3,
@@ -193,6 +197,15 @@ def load_config(path: Path) -> Dict[str, Any]:
         )
     with path.open("rb") as f:
         user_cfg = tomllib.load(f)
+    # Validate: warn about unknown top-level keys
+    known_keys = set(DEFAULT_CONFIG.keys())
+    unknown = set(user_cfg.keys()) - known_keys
+    if unknown:
+        print(f"[agentloop:warn] Unknown config keys: {', '.join(sorted(unknown))}")
+    # Validate required fields
+    project = user_cfg.get("project", {})
+    if project.get("path") and not Path(project["path"]).expanduser().exists():
+        print(f"[agentloop:warn] project.path does not exist: {project['path']}")
     return deep_merge(DEFAULT_CONFIG, user_cfg)
 
 
@@ -510,7 +523,7 @@ def preflight(config: Dict[str, Any], project_root: Path, run_dir: Path) -> None
 
 # ── Repo inspection ───────────────────────────────────────────────
 
-def collect_repo_snapshot(project_root: Path, test_output: str = "") -> str:
+def collect_repo_snapshot(project_root: Path, test_output: str = "", config: Optional[Dict[str, Any]] = None) -> str:
     chunks = []
     # Detect sub-repos (directories with .git inside project_root)
     sub_repos = sorted(
@@ -518,8 +531,8 @@ def collect_repo_snapshot(project_root: Path, test_output: str = "") -> str:
         if d.is_dir() and (d / ".git").exists()
     )
     if sub_repos:
-        # Multi-repo mode: run git commands per sub-repo
-        for repo in sub_repos:
+        # Multi-repo mode: run git commands per sub-repo IN PARALLEL
+        def _snapshot_repo(repo: str) -> str:
             repo_path = project_root / repo
             git_cmds = [
                 ("status", "git status --short | head -40 || true"),
@@ -532,9 +545,11 @@ def collect_repo_snapshot(project_root: Path, test_output: str = "") -> str:
                 if out:
                     repo_chunks.append(f"  {label}:\n{out}")
             if repo_chunks:
-                chunks.append(f"## {repo}/\n```text\n" + "\n".join(repo_chunks) + "\n```")
-            else:
-                chunks.append(f"## {repo}/\n```text\nclean\n```")
+                return f"## {repo}/\n```text\n" + "\n".join(repo_chunks) + "\n```"
+            return f"## {repo}/\n```text\nclean\n```"
+
+        with ThreadPoolExecutor(max_workers=min(len(sub_repos), 4)) as ex:
+            chunks = list(ex.map(_snapshot_repo, sub_repos))
     else:
         # Single-repo fallback
         for label, cmd in [
@@ -544,10 +559,16 @@ def collect_repo_snapshot(project_root: Path, test_output: str = "") -> str:
             res = run_shell(label, cmd, cwd=project_root, timeout_sec=60)
             chunks.append(f"## {label}\n```text\n{trim(res.stdout + res.stderr, 6000)}\n```")
     # File listing
+    # File listing with configurable exclusions
+    exclude_patterns = (config or {}).get("project", {}).get(
+        "snapshot_exclude",
+        ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/"]
+    )
+    grep_pattern = "|".join(exclude_patterns) if exclude_patterns else "^$"
     res = run_shell("recent_files",
-        "find . -maxdepth 3 -type f | sed 's#^./##' "
-        "| grep -Ev '(^\\.git/|^\\.agentloop/|node_modules/|\\.venv/|__pycache__/|bun\\.lock|uv\\.lock)' "
-        "| sort | head -150",
+        f"find . -maxdepth 3 -type f | sed 's#^./##' "
+        f"| grep -Ev '({grep_pattern})' "
+        f"| sort | head -150",
         cwd=project_root, timeout_sec=60)
     chunks.append(f"## recent_files\n```text\n{trim(res.stdout, 6000)}\n```")
     if test_output:
@@ -562,14 +583,19 @@ def worktree_hash(project_root: Path) -> str:
         if d.is_dir() and (d / ".git").exists()
     )
     if sub_repos:
-        for repo in sub_repos:
+        def _hash_repo(repo: str) -> str:
             repo_path = project_root / repo
+            out = []
             for cmd in [
                 "git status --porcelain=v1 | head -50 || true",
                 "git diff --stat | head -20 || true",
             ]:
                 res = run_shell("hash", cmd, cwd=repo_path, timeout_sec=30)
-                parts.append(res.stdout)
+                out.append(res.stdout)
+            return "\n".join(out)
+
+        with ThreadPoolExecutor(max_workers=min(len(sub_repos), 4)) as ex:
+            parts = list(ex.map(_hash_repo, sub_repos))
     else:
         for cmd in [
             "git status --porcelain=v1 || true",
@@ -618,6 +644,36 @@ def _get_agent_cfg(config: Dict[str, Any], role: str) -> Dict[str, Any]:
 
 
 def run_tests(config: Dict[str, Any], project_root: Path, log_dir: Path) -> Tuple[bool, str]:
+    """Run tests — supports both single test_command and [[project.tests]] array."""
+    tests_array = config["project"].get("tests", [])
+
+    if tests_array:
+        # Parallel test execution from [[project.tests]] array
+        results: List[Tuple[str, CommandResult]] = []
+
+        def _run_one(test_cfg: Dict[str, Any]) -> Tuple[str, CommandResult]:
+            name = test_cfg.get("name", "test")
+            cmd = test_cfg.get("command", "")
+            cwd = project_root / test_cfg.get("cwd", ".")
+            timeout = int(test_cfg.get("timeout_sec", 300))
+            res = run_shell(f"test-{name}", cmd, cwd=cwd, timeout_sec=timeout)
+            return name, res
+
+        with ThreadPoolExecutor(max_workers=min(len(tests_array), 4)) as ex:
+            futures = [ex.submit(_run_one, t) for t in tests_array]
+            for f in as_completed(futures):
+                results.append(f.result())
+
+        all_ok = all(r.ok for _, r in results)
+        combined_output = "\n".join(
+            f"── {name} ({'✅' if r.ok else '❌'}) ──\n{r.combined(limit=8000)}"
+            for name, r in results
+        )
+        for name, r in results:
+            write_result(log_dir / f"test_{name}.md", r)
+        return all_ok, combined_output
+
+    # Fallback: single test_command
     command = str(config["project"].get("test_command", "")).strip()
     if not command:
         return False, "No test_command configured; skipped."
@@ -672,8 +728,9 @@ def kiro_builder_parallel(
     if len(sub_repos) <= 1:
         return kiro_builder(config, project_root, prompt)
 
-    cfg = config["kiro_builder"]
-    timeout = int(cfg.get("timeout_sec", 3600))
+    cfg = _get_agent_cfg(config, "builder")
+    timeout = int(cfg.get("timeout_sec", 7200))
+    max_workers = int(config.get("loop", {}).get("max_parallel_builders", 3))
 
     def build_one(repo_focus: str) -> CommandResult:
         focused_prompt = (
@@ -681,18 +738,12 @@ def kiro_builder_parallel(
             f"Focus ONLY on `{repo_focus}/` directory in this iteration. "
             f"Do not modify files outside `{repo_focus}/`."
         )
-        cmd = [str(cfg.get("command", "kiro-cli")), "chat", "--no-interactive"]
-        if cfg.get("agent"):
-            cmd.extend(["--agent", str(cfg["agent"])])
-        if cfg.get("trust_all_tools"):
-            cmd.append("--trust-all-tools")
-        elif cfg.get("trust_tools"):
-            cmd.append("--trust-tools=" + str(cfg["trust_tools"]))
+        cmd = _build_kiro_cmd(cfg)
         cmd.append(focused_prompt)
         return run_command(f"kiro-builder-{repo_focus}", cmd, cwd=project_root, timeout_sec=timeout)
 
     results: List[CommandResult] = []
-    with ThreadPoolExecutor(max_workers=min(len(sub_repos), 3)) as executor:
+    with ThreadPoolExecutor(max_workers=min(len(sub_repos), max_workers)) as executor:
         futures = {executor.submit(build_one, repo): repo for repo in sub_repos}
         for future in as_completed(futures):
             repo = futures[future]
@@ -1043,10 +1094,11 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     hash_before = worktree_hash(project_root)
                     build_start = time.monotonic()
                     # Detect sub-repos for parallel build
+                    exclude_dirs = set(config.get("project", {}).get("exclude_dirs", []))
                     sub_repos = sorted(
                         d.name for d in project_root.iterdir()
                         if d.is_dir() and (d / ".git").exists()
-                        and d.name not in {"ai-orchestrator-template"}
+                        and d.name not in exclude_dirs
                     )
                     if len(sub_repos) > 1 and bi > 1:
                         result = kiro_builder_parallel(config, project_root, build_prompt, sub_repos)

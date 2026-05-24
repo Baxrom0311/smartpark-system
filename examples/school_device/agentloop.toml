@@ -1,0 +1,93 @@
+[project]
+path = "/Users/baxrom/ish_full/burxon"
+brief_file = "ai-orchestrator-template/PROJECT_BRIEF.md"
+# Test buyruqlari - har bir repo uchun alohida
+# Backend: cd api_school_device && uv run pytest -q
+# Dashboard: cd school_device_dashboard && bun run build
+# Member App: cd school_device_member_app && bun run build
+# ESP32: cd esp32_firmware && pio run
+test_command = "cd /Users/baxrom/ish_full/burxon/api_school_device && uv run pytest -q --no-header 2>&1 | tail -20; cd /Users/baxrom/ish_full/burxon/school_device_dashboard && npx tsc --noEmit 2>&1 | tail -5; cd /Users/baxrom/ish_full/burxon/school_device_member_app && npx tsc --noEmit 2>&1 | tail -5"
+logs_dir = ".agentloop/runs"
+
+[loop]
+# Tezlashtirilgan - parallel build, kamroq cycle
+plan_cycles = 3
+review_cycles = 2
+build_iterations = 5
+no_change_limit = 2
+sleep_between_rounds_sec = 1
+max_total_builds = 50
+max_discovery_rounds = 2
+parallel_review = true
+# Parallel: build 2+ dan boshlab sub-repo'larga parallel builder yuboriladi
+# Build 1 = single (plan tushunish), Build 2+ = parallel (tez ishlash)
+
+[retry]
+max_attempts = 3
+backoff_base = 2
+backoff_max = 60
+jitter = true
+
+[budget]
+# 0 = unlimited. Taxminiy narxlar (haqiqiy narx model ga bog'liq).
+max_cost_usd = 0
+warn_at_pct = 80
+cost_per_build_usd = 0.15
+cost_per_review_usd = 0.05
+cost_per_plan_usd = 0.10
+
+# ── Multi-model agent konfiguratsiyasi ──────────────────────────
+# Har bir agent uchun alohida model/timeout sozlash mumkin.
+# Agent JSON fayllarida model belgilanadi (.kiro/agents/*.json)
+
+[agents.planner]
+command = "kiro-cli"
+agent = "ai-planner"
+timeout_sec = 3600
+trust_all_tools = true
+
+[agents.builder]
+command = "kiro-cli"
+agent = "ai-builder"
+timeout_sec = 7200
+trust_all_tools = true
+
+[agents.reviewer]
+command = "kiro-cli"
+agent = "ai-reviewer"
+timeout_sec = 3600
+trust_all_tools = true
+
+# ── Legacy config (backward compatible) ─────────────────────────
+
+[kiro]
+# Planner + Reviewer (Opus 4.7 - arxitektura va review uchun)
+enabled = true
+command = "kiro-cli"
+agent = "ai-planner"
+timeout_sec = 3600
+resume = false
+trust_tools = ""
+trust_all_tools = true
+require_mcp_startup = false
+
+[kiro_builder]
+# Builder (Opus 4.7 - kod yozish uchun)
+enabled = true
+command = "kiro-cli"
+agent = "ai-builder"
+timeout_sec = 7200
+trust_tools = "read,write,grep,shell"
+trust_all_tools = true
+
+[telegram]
+# Telegram xabarnomalar - progress tracking uchun
+enabled = true
+bot_token = "${TELEGRAM_BOT_TOKEN}"
+chat_id = "5146421024"
+
+[git]
+# Har build dan keyin avtomatik push
+auto_push = false
+branch = "ai-orchestrator/full-fix"
+commit_message = "feat: AI orchestrator - school device system improvements"
