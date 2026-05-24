@@ -1,275 +1,158 @@
-# School Device Management System — Full Fix & ESP32 Firmware
+# School Device — ESP32 Mustahkamlash
 
 ## Goal
 
-Maktab qo'ng'iroq qurilmalarini (ESP32-based IoT) boshqarish tizimini to'liq ishga tushirish:
-1. Backend (Django) dagi barcha critical/medium buglarni tuzatish
-2. ESP32 firmware yozish (PlatformIO + Espressif framework)
-3. Dashboard (admin panel) dagi buglarni tuzatish
-4. Member App (oddiy foydalanuvchi ilovasi) dagi buglarni tuzatish
-5. Arxitekturani to'g'rilash (rollar, permission, flow)
+ESP32 firmware'ni production-ready qilish: WiFi AP provisioning, RTC diagnostika, offline xavfsizlik.
 
-## Arxitektura
+## Vazifalar
 
+### 1. WiFi AP Provisioning (Captive Portal)
+
+WiFi'ga ulanolmasa ESP32 o'zi Access Point bo'ladi va web-sahifa orqali sozlanadi.
+
+**Logic:**
 ```
-┌──────────────────┐      MQTT (TLS)     ┌──────────────┐
-│  ESP32 Devices   │◄───────────────────►│  EMQX Broker │
-│  (PlatformIO)    │                     └──────┬───────┘
-└──────────────────┘                            │
-                                                │ MQTT subscribe
-┌──────────────────┐      REST API       ┌─────▼────────────┐
-│  Dashboard       │◄──────────────────►│  Django API        │
-│  (Admin panel)   │                    │  + Celery + Redis  │
-│  React+Vite+TS   │                    │  + PostgreSQL      │
-└──────────────────┘                    └─────▲────────────┘
-                                              │ REST API
-┌──────────────────┐                          │
-│  Member App      │◄─────────────────────────┘
-│  (Maktab user)   │
-│  React+Vite+TS   │
-└──────────────────┘
+Boot → NVS'dan WiFi creds o'qish → Ulanishga harakat (3 marta)
+  ├── Ulandi → Normal mode (MQTT, schedule, etc.)
+  └── Ulanolmadi → AP Mode:
+        ├── SSID: "SchoolBell_XXXX" (oxirgi 4 hex MAC)
+        ├── Password: kuchli (NVS'da yoki device label'da)
+        ├── Captive Portal: 192.168.4.1
+        ├── Web sahifa: FAQAT WiFi SSID/Password o'zgartirish
+        ├── Boshqa sozlamalar YO'Q (xavfsizlik)
+        └── Save → NVS'ga yozish → Reboot → Normal mode
 ```
 
-### Rollar
+**Xavfsizlik:**
+- AP parol: `SchoolBell_` + device MAC oxirgi 6 ta (masalan: `SchoolBell_71CE40`)
+- Captive portal'da faqat WiFi creds — jadval, MQTT, boshqa narsa o'zgartirib bo'lmaydi
+- 5 daqiqa ichida sozlanmasa → AP o'chadi, 10 daqiqadan keyin yana harakat
+- Brute-force himoya: 3 ta noto'g'ri parol → 30s kutish
 
-| Rol | Panel | Imkoniyatlar |
-|-----|-------|-------------|
-| SuperAdmin | Dashboard | Barcha qurilmalar, foydalanuvchilar, firmware, OTA |
-| SchoolAdmin | Member App | O'z maktabi qurilmalari, jadvallar, sozlamalar |
-| Member | Member App | Faqat ko'rish, jadval ko'rish |
+**Fayllar:**
+- `esp32_firmware/src/ap_provisioning.c` + `.h`
+- `esp32_firmware/src/captive_portal.c` + `.h` (HTTP server + HTML)
+- `esp32_firmware/src/main.c` — AP mode logic
 
-**Muhim:** Dashboard — faqat SuperAdmin uchun. Member App — maktab adminlari va oddiy foydalanuvchilar uchun.
+### 2. Offline Mode Xavfsizlik
 
-## Repositories
+**Qoidalar:**
+- Offline vaqtida ESP32 FAQAT NVS'dagi 7 kunlik jadval bilan ishlaydi
+- Offline'da hech narsa o'zgartirilmaydi (AP mode'dan tashqari WiFi creds)
+- Online bo'lganda:
+  - Server'dan jadval yangilanganmi tekshirish (version compare)
+  - Yangilangan bo'lsa → yuklab olish va NVS'ga saqlash
+  - Vaqtni SNTP'dan olish va RTC'ga yozish
 
+**Jadval sync logic:**
 ```
-burxon/
-├── api_school_device/          # Django 5.2 + DRF backend
-├── school_device_dashboard/    # React admin panel (SuperAdmin only)
-├── school_device_member_app/   # React member app (SchoolAdmin + Member)
-└── esp32_firmware/             # ESP32 PlatformIO firmware (YANGI)
-```
-
----
-
-## Phase 1: ESP32 Firmware (PlatformIO + Espressif Framework)
-
-### Yaratish kerak: `esp32_firmware/` papka
-
-**Platform:** ESP32-WROOM-32, PlatformIO, `framework = espidf` (Espressif IDF)
-
-### Funksionallik:
-1. **WiFi ulanish** — SSID/password NVS (non-volatile storage) dan o'qiladi
-2. **MQTT ulanish** — EMQX broker'ga TLS bilan ulanish
-3. **Auto-registration** — birinchi ishga tushganda API'ga o'zini ro'yxatdan o'tkazish
-4. **Qo'ng'iroq boshqarish** — GPIO pin orqali relay/buzzer boshqarish
-5. **Jadval sinxronizatsiya** — MQTT orqali jadval olish va NVS'da saqlash
-6. **OTA yangilash** — MQTT orqali firmware yangilash buyrug'ini qabul qilish, HTTPS orqali yuklab olish
-7. **Status reporting** — har 30 soniyada heartbeat, WiFi signal, uptime
-8. **Offline mode** — internet yo'q bo'lganda NVS'dagi jadval bo'yicha ishlash
-9. **API key authentication** — device activation flow
-
-### MQTT Topics:
-```
-devices/{device_id}/command     # Server → Device (ring, sync, ota, reboot)
-devices/{device_id}/status      # Device → Server (heartbeat, online/offline)
-devices/{device_id}/ota/status  # Device → Server (ota progress/result)
-devices/{device_id}/schedule    # Server → Device (jadval yuborish)
-devices/{device_id}/config      # Server → Device (konfiguratsiya)
+Online bo'ldi → MQTT subscribe → Server jadval version yuboradi
+  ├── Version == NVS version → hech narsa qilmaslik
+  └── Version > NVS version → yangi jadval olish → NVS'ga saqlash
 ```
 
-### Fayl tuzilishi:
+### 3. RTC Diagnostika va Batareya Monitoring
+
+**Muammo:** RTC batareykasi o'lsa vaqt noto'g'ri bo'ladi → jadval ishlamaydi.
+
+**Yechim:**
+```
+Har kuni 1 marta (soat 3:00 da):
+  1. SNTP'dan vaqt olish
+  2. RTC'dan vaqt o'qish
+  3. Farq > 30 soniya → RTC'ni SNTP bilan to'g'rilash
+  4. Farq > 5 daqiqa → RTC batareya muammosi! → MQTT alert yuborish
+  5. 3 kun ketma-ket farq > 5 min → "RTC_BATTERY_DEAD" flag → dashboard'da ko'rsatish
+
+Boot'da:
+  1. RTC'dan vaqt o'qish
+  2. Agar vaqt < 2024 yil → RTC batareya o'lgan
+  3. SNTP kutish (online bo'lguncha offline jadval bilan ishlash)
+```
+
+**MQTT alert format:**
+```json
+{"type": "rtc_drift", "drift_sec": 312, "battery_status": "low"}
+```
+
+**Dashboard'da:**
+- Qurilma kartasida: "RTC ⚠️ Batareya zaiflashgan" badge
+- Alert: "Qurilma X ning RTC batareykasini almashtiring"
+
+### 4. Vaqt Sinxronizatsiya Strategiya
+
+```
+Boot:
+  1. RTC → system time (darhol, offline ishlashi uchun)
+  2. WiFi ulanganda → SNTP sync → RTC'ga yozish
+
+Har kuni soat 3:00:
+  1. SNTP sync
+  2. RTC bilan solishtirish (diagnostika)
+  3. RTC'ni yangilash
+
+Har soatda:
+  1. SNTP re-sync (allaqachon bor ✅)
+  2. RTC'ga yozish (allaqachon bor ✅)
+```
+
+### 5. WiFi Reconnect Strategiya (AP+STA mode)
+
+ESP32 bir vaqtda AP (tarqatish) va STA (ulanish) ishlata oladi.
+
+```
+Boot:
+  1. NVS'da WiFi creds bormi?
+     ├── Yo'q → AP+STA mode (AP ko'rinadi, STA scan qiladi)
+     └── Bor → STA ulanishga harakat
+
+  2. STA 5 marta fail:
+     → AP yoqiladi (AP+STA mode)
+     → STA background'da retry davom etadi (30s interval)
+     → AP orqali yangi WiFi sozlash mumkin
+
+  3. STA ulandi:
+     → Normal mode (MQTT, jadval sync)
+     → AP 2 daqiqadan keyin o'chadi (RAM tejash)
+     → Agar WiFi yana uzilsa → AP qayta yoqiladi
+
+  4. Reset tugma 3s bosilsa:
+     → AP majburiy yoqiladi (WiFi qayta sozlash uchun)
+```
+
+**Muhim:** AP yoqiq bo'lsa ham jadval NVS'dan ishlayveradi. WiFi/MQTT faqat sync uchun kerak.
+
+## Fayllar
+
 ```
 esp32_firmware/
-├── platformio.ini
 ├── src/
-│   ├── main.c
-│   ├── wifi_manager.c / .h
-│   ├── mqtt_client.c / .h
-│   ├── schedule_manager.c / .h
-│   ├── ota_manager.c / .h
-│   ├── bell_controller.c / .h
-│   ├── nvs_storage.c / .h
-│   ├── device_registration.c / .h
-│   └── status_reporter.c / .h
-├── include/
-│   └── config.h
-├── partitions.csv
-└── README.md
+│   ├── ap_provisioning.c    # WiFi AP mode + captive portal
+│   ├── ap_provisioning.h
+│   ├── captive_dns.c        # DNS redirect (captive portal uchun)
+│   ├── captive_dns.h
+│   ├── rtc_diagnostics.c    # RTC drift detection + battery alert
+│   ├── rtc_diagnostics.h
+│   ├── main.c               # AP mode logic, WiFi retry strategy
+│   ├── wifi_manager.c       # Yangilangan: AP fallback
+│   └── schedule_manager.c   # Version-based sync
 ```
-
-### platformio.ini:
-```ini
-[env:esp32]
-platform = espressif32
-board = esp32dev
-framework = espidf
-monitor_speed = 115200
-board_build.partitions = partitions.csv
-build_flags =
-    -DCONFIG_ESP_TLS_USING_MBEDTLS=y
-```
-
----
-
-## Phase 2: Backend Bug Fixes (api_school_device)
-
-### CRITICAL fixes:
-
-#### 2.1 DeviceLog model qaytarish
-- `src/apps/devices/models/device_log.py` yaratish (LogLevel, LogSource, DeviceLog)
-- `models/__init__.py` ga import qo'shish
-- Migration yaratish
-
-#### 2.2 Security fixes
-- `SECRET_KEY`: default qiymatni olib tashlash, env majburiy qilish
-- `auto_register` endpoint: API key yoki rate-limit qo'shish
-- MQTT password: hash qilib saqlash (PBKDF2 yoki bcrypt)
-- `RegisterView`: verification_token ni response'dan olib tashlash (production)
-- `CORS_ALLOW_ALL_ORIGINS`: `DEBUG` ga bog'lash
-
-#### 2.3 Auth fixes
-- `LoginSerializer`: `is_verified` tekshirish qo'shish
-- `ResendVerificationView`: rate-limit (1 request/minute)
-- `username` field: `unique=True` qo'shish
-
-#### 2.4 Performance fixes
-- OTA batch counter: `F()` expression ishlatish (race condition fix)
-- `DeviceListSerializer`: `select_related("schedule")` list action'da ham
-- `FirmwareVersion.save()`: faqat yangi upload'da file read qilish
-- Duplicate indexes olib tashlash
-
-#### 2.5 Device activation flow to'g'rilash
-- `activate_with_api_key`: `permission_classes=[AllowAny]` qilish (ESP32 uchun)
-- Device registration → activation → MQTT credentials flow
-
-#### 2.6 Throttle rate oshirish
-- `"user": "10000/day"` (IoT admin uchun)
-
----
-
-## Phase 3: Dashboard Fixes (school_device_dashboard)
-
-### 3.1 Auth flow fixes
-- Token refresh: bitta joyda (api-client interceptor), auth-store'dan olib tashlash
-- 401 handling: interceptor refresh qiladi, faqat refresh ham fail bo'lsa logout
-- Cookie: `Secure; SameSite=Strict` flag qo'shish
-- localStorage desync: `isAuthenticated` ni cookie'dan derive qilish
-
-### 3.2 Forgot password
-- Haqiqiy API call qo'shish (`/auth/forgot-password/` endpoint)
-- OTP sahifasiga email pass qilish
-
-### 3.3 Error handling
-- `handleServerError`: `data.detail` ishlatish (`data.title` emas)
-- QueryCache 401: faqat refresh fail bo'lganda logout
-
-### 3.4 UI fixes
-- `ThemeProvider`: `resolvedTheme` ni state bilan track qilish
-- `useTableUrlState`: URL o'zgarganda state sync qilish
-- `DeviceClaim`: `basePath` ga qarab to'g'ri navigate qilish
-
-### 3.5 Clerk olib tashlash
-- Dashboard Clerk auth ishlatmaydi (o'z JWT auth), Clerk dependency olib tashlash
-- O'z auth flow (login/register/JWT) to'liq ishlashi kerak
-
----
-
-## Phase 4: Member App Fixes (school_device_member_app)
-
-### 4.1 Token refresh qo'shish (CRITICAL)
-- 401 interceptor: avval refresh token bilan yangilash
-- Faqat refresh ham fail bo'lsa logout
-- `isRefreshing` flag + request queue (parallel request'lar uchun)
-
-### 4.2 Schedule fixes
-- `getSchedule`: error'ni swallow qilmaslik, throw qilish
-- Schedule create: yangi device uchun POST (create), mavjud uchun PATCH (update)
-- `timesToPairs`: entry/exit semantikasini saqlash
-- `schedule!.id` null check qo'shish
-
-### 4.3 Device claim fix
-- `handleGoToDashboard`: `claimedDevice` ni reset qilish yoki navigate
-
-### 4.4 Cleanup
-- `"install": "^0.13.0"` dependency olib tashlash
-- Cookie: `Secure; SameSite=Strict` qo'shish
-
----
-
-## Phase 5: Arxitektura to'g'rilash
-
-### 5.1 Permission system
-Backend'da:
-- `IsSuperAdmin` — faqat Dashboard API'lar uchun
-- `IsSchoolAdmin` — o'z maktabi qurilmalari uchun
-- `IsMember` — faqat o'qish
-
-### 5.2 API endpoint'larni ajratish
-```
-/api/v1/admin/...     → Dashboard (SuperAdmin only)
-/api/v1/member/...    → Member App (SchoolAdmin + Member)
-/api/v1/device/...    → ESP32 device endpoints (API key auth)
-```
-
-### 5.3 Device ownership
-- Device → School → Users (many-to-many through SchoolMembership)
-- SchoolAdmin faqat o'z maktabi qurilmalarini ko'radi/boshqaradi
-
-### 5.4 Backend'ga yangi endpoint'lar
-- `POST /api/v1/device/auto-register/` — ESP32 o'zini ro'yxatdan o'tkazish (API key)
-- `POST /api/v1/device/activate/` — Device activation (API key)
-- `GET /api/v1/device/credentials/` — MQTT credentials olish
-- `GET /api/v1/member/my-devices/` — Foydalanuvchi qurilmalari
-- `GET /api/v1/member/my-schedules/` — Foydalanuvchi jadvallari
-- `POST /api/v1/admin/ota/batch/` — OTA batch yaratish
-- `POST /api/v1/auth/forgot-password/` — Parol tiklash
-
----
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Backend | Django 5.2, DRF, SimpleJWT, Celery, Redis, PostgreSQL |
-| Dashboard | React 19, Vite 7, TanStack Router, ShadcnUI, TypeScript, Bun |
-| Member App | React 19, Vite 7, TanStack Router, TypeScript, Bun |
-| ESP32 | PlatformIO, Espressif IDF (espidf framework), C |
-| MQTT Broker | EMQX |
-| Monitoring | Sentry, Prometheus |
-
----
 
 ## Acceptance Criteria
+- [ ] WiFi'ga 3 marta ulanolmasa → AP mode yoqiladi
+- [ ] AP mode: "SchoolBell_XXXX" SSID, kuchli parol
+- [ ] Captive portal: faqat WiFi SSID/password o'zgartirish
+- [ ] Boshqa sozlamalar captive portal'da YO'Q
+- [ ] WiFi sozlangandan keyin reboot va normal mode
+- [ ] Offline: NVS jadval bilan ishlaydi, hech narsa o'zgarmaydi
+- [ ] Online: jadval version tekshirish, yangilangan bo'lsa sync
+- [ ] RTC drift > 5 min → MQTT alert
+- [ ] 3 kun ketma-ket drift → "battery dead" flag
+- [ ] Dashboard'da RTC battery status ko'rinadi
+- [ ] AP mode 5 daqiqadan keyin avtomatik o'chadi
 
-- [ ] ESP32 firmware kompilatsiya bo'ladi (PlatformIO build success)
-- [ ] ESP32 WiFi'ga ulanadi, MQTT broker'ga connect bo'ladi
-- [ ] ESP32 auto-register va activate flow ishlaydi
-- [ ] ESP32 jadval bo'yicha qo'ng'iroq chaladi
-- [ ] ESP32 OTA yangilash ishlaydi
-- [ ] Backend barcha critical buglar tuzatilgan
-- [ ] Backend test'lar o'tadi (pytest)
-- [ ] Dashboard auth flow to'liq ishlaydi (login → refresh → logout)
-- [ ] Dashboard forgot password ishlaydi
-- [ ] Member App token refresh ishlaydi
-- [ ] Member App schedule create/update ishlaydi
-- [ ] Permission system to'g'ri ishlaydi (SuperAdmin vs SchoolAdmin vs Member)
-- [ ] CORS production'da cheklangan
-- [ ] SECRET_KEY xavfsiz
-- [ ] MQTT password hashed
-
-## Non-Goals
-
-- Mobile native app (React Native/Flutter) — hozircha yo'q
-- Payment/billing system
-- SMS notification (faqat email)
-- Multi-tenant SaaS (hozircha single-instance)
-- ESP32 BLE provisioning (hozircha hardcoded WiFi credentials)
-
-## Priority Order
-
-1. **ESP32 Firmware** (yangi, asosiy hardware qism)
-2. **Backend Critical Fixes** (security + crash fixes)
-3. **Member App Fixes** (end-user experience)
-4. **Dashboard Fixes** (admin experience)
-5. **Arxitektura to'g'rilash** (permission, API separation)
+## Priority
+1. WiFi AP Provisioning (eng muhim — qurilma sozlash)
+2. RTC Diagnostika (batareya monitoring)
+3. Offline xavfsizlik (allaqachon 90% tayyor)
+4. Vaqt sync strategiya (allaqachon 80% tayyor)

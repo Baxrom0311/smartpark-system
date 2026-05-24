@@ -6,18 +6,20 @@ brief_file = "ai-orchestrator-template/PROJECT_BRIEF.md"
 # Dashboard: cd school_device_dashboard && bun run build
 # Member App: cd school_device_member_app && bun run build
 # ESP32: cd esp32_firmware && pio run
-test_command = "cd ../api_school_device && uv run pytest -q --no-header 2>/dev/null; cd ../school_device_dashboard && bun run build 2>&1 | tail -5; cd ../school_device_member_app && bun run build 2>&1 | tail -5"
+test_command = "cd /Users/baxrom/ish_full/burxon/api_school_device && uv run pytest -q --no-header 2>&1 | tail -20; cd /Users/baxrom/ish_full/burxon/school_device_dashboard && npx tsc --noEmit 2>&1 | tail -5; cd /Users/baxrom/ish_full/burxon/school_device_member_app && npx tsc --noEmit 2>&1 | tail -5"
 logs_dir = ".agentloop/runs"
 
 [loop]
-# Katta loyiha - 5 phase, ko'p fayllar
-plan_cycles = 5
-review_cycles = 3
-build_iterations = 8
-no_change_limit = 3
-sleep_between_rounds_sec = 2
-max_total_builds = 80
-max_discovery_rounds = 3
+# Tezlashtirilgan - parallel build, kamroq cycle
+plan_cycles = 3
+review_cycles = 2
+build_iterations = 5
+no_change_limit = 2
+sleep_between_rounds_sec = 1
+max_total_builds = 30
+max_discovery_rounds = 1
+# Parallel: build 2+ dan boshlab sub-repo'larga parallel builder yuboriladi
+# Build 1 = single (plan tushunish), Build 2+ = parallel (tez ishlash)
 
 [kiro]
 # Planner + Reviewer (Opus 4.7 - arxitektura va review uchun)
@@ -42,7 +44,7 @@ trust_all_tools = true
 [telegram]
 # Telegram xabarnomalar - progress tracking uchun
 enabled = true
-bot_token = "8860807129:AAF0p6MJbHeARftMYoL1JLcB6nGy2js8Iuw"
+bot_token = "${TELEGRAM_BOT_TOKEN}"
 chat_id = "5146421024"
 
 [git]

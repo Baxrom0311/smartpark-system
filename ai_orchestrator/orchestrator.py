@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -282,7 +283,9 @@ def preflight(config: Dict[str, Any], project_root: Path, run_dir: Path) -> None
             "note": "KIRO_API_KEY is not set.",
         })
     checks.append({
-        "component": "git", "ok": (project_root / ".git").exists(),
+        "component": "git", "ok": (project_root / ".git").exists() or any(
+            (d / ".git").exists() for d in project_root.iterdir() if d.is_dir()
+        ),
         "note": "recommended; Codex may require a Git repository",
     })
     write_text(run_dir / "preflight.json", json.dumps(checks, indent=2))
@@ -300,42 +303,73 @@ def preflight(config: Dict[str, Any], project_root: Path, run_dir: Path) -> None
 # ── Repo inspection ───────────────────────────────────────────────
 
 def collect_repo_snapshot(project_root: Path, test_output: str = "") -> str:
-    commands = [
-        ("pwd", "pwd"),
-        ("git_status", "git status --short || true"),
-        ("git_diff_stat", "git diff --stat || true"),
-        ("git_diff_names", "git diff --name-status || true"),
-        ("untracked", "git ls-files --others --exclude-standard | head -120 || true"),
-        (
-            "recent_files",
-            "find . -maxdepth 3 -type f | sed 's#^./##' "
-            "| grep -Ev '(^\\.git/|^\\.agentloop/|node_modules/|\\.venv/|__pycache__/)' "
-            "| sort | head -200",
-        ),
-    ]
     chunks = []
-    for label, cmd in commands:
-        res = run_shell(label, cmd, cwd=project_root, timeout_sec=60)
-        chunks.append(
-            f"## {label}\n```text\n{trim(res.stdout + res.stderr, 6000)}\n```"
-        )
+    # Detect sub-repos (directories with .git inside project_root)
+    sub_repos = sorted(
+        d.name for d in project_root.iterdir()
+        if d.is_dir() and (d / ".git").exists()
+    )
+    if sub_repos:
+        # Multi-repo mode: run git commands per sub-repo
+        for repo in sub_repos:
+            repo_path = project_root / repo
+            git_cmds = [
+                ("status", "git status --short | head -40 || true"),
+                ("diff", "git diff --stat | head -30 || true"),
+            ]
+            repo_chunks = []
+            for label, cmd in git_cmds:
+                res = run_shell(f"{repo}_{label}", cmd, cwd=repo_path, timeout_sec=30)
+                out = (res.stdout + res.stderr).strip()
+                if out:
+                    repo_chunks.append(f"  {label}:\n{out}")
+            if repo_chunks:
+                chunks.append(f"## {repo}/\n```text\n" + "\n".join(repo_chunks) + "\n```")
+            else:
+                chunks.append(f"## {repo}/\n```text\nclean\n```")
+    else:
+        # Single-repo fallback
+        for label, cmd in [
+            ("git_status", "git status --short || true"),
+            ("git_diff_stat", "git diff --stat || true"),
+        ]:
+            res = run_shell(label, cmd, cwd=project_root, timeout_sec=60)
+            chunks.append(f"## {label}\n```text\n{trim(res.stdout + res.stderr, 6000)}\n```")
+    # File listing
+    res = run_shell("recent_files",
+        "find . -maxdepth 3 -type f | sed 's#^./##' "
+        "| grep -Ev '(^\\.git/|^\\.agentloop/|node_modules/|\\.venv/|__pycache__/|bun\\.lock|uv\\.lock)' "
+        "| sort | head -150",
+        cwd=project_root, timeout_sec=60)
+    chunks.append(f"## recent_files\n```text\n{trim(res.stdout, 6000)}\n```")
     if test_output:
-        chunks.append(
-            f"## latest_test_output\n```text\n{trim(test_output, 12000)}\n```"
-        )
+        chunks.append(f"## latest_test_output\n```text\n{trim(test_output, 12000)}\n```")
     return "\n\n".join(chunks)
 
 
 def worktree_hash(project_root: Path) -> str:
     parts: List[str] = []
-    for cmd in [
-        "git status --porcelain=v1 || true",
-        "git diff --stat || true",
-        "git ls-files --others --exclude-standard | head -200 || true",
-        "find . -maxdepth 3 -name '*.py' -newer .git/HEAD 2>/dev/null | head -50 || true",
-    ]:
-        res = run_shell("hash", cmd, cwd=project_root, timeout_sec=60)
-        parts.append(res.stdout)
+    sub_repos = sorted(
+        d.name for d in project_root.iterdir()
+        if d.is_dir() and (d / ".git").exists()
+    )
+    if sub_repos:
+        for repo in sub_repos:
+            repo_path = project_root / repo
+            for cmd in [
+                "git status --porcelain=v1 | head -50 || true",
+                "git diff --stat | head -20 || true",
+            ]:
+                res = run_shell("hash", cmd, cwd=repo_path, timeout_sec=30)
+                parts.append(res.stdout)
+    else:
+        for cmd in [
+            "git status --porcelain=v1 || true",
+            "git diff --stat || true",
+            "git ls-files --others --exclude-standard | head -200 || true",
+        ]:
+            res = run_shell("hash", cmd, cwd=project_root, timeout_sec=60)
+            parts.append(res.stdout)
     return hashlib.sha256(
         "\n".join(parts).encode("utf-8", errors="ignore")
     ).hexdigest()
@@ -388,6 +422,64 @@ def kiro_builder(config: Dict[str, Any], project_root: Path, prompt: str) -> Com
     return run_command(
         "kiro-builder", cmd, cwd=project_root,
         timeout_sec=int(cfg.get("timeout_sec", 3600)),
+    )
+
+
+def kiro_builder_parallel(
+    config: Dict[str, Any], project_root: Path, prompt: str, sub_repos: List[str]
+) -> CommandResult:
+    """Run multiple builders in parallel — one per sub-repo focus area.
+
+    Splits the prompt into repo-specific tasks and runs them concurrently.
+    Falls back to single builder if only 1 repo needs changes.
+    """
+    if len(sub_repos) <= 1:
+        return kiro_builder(config, project_root, prompt)
+
+    cfg = config["kiro_builder"]
+    timeout = int(cfg.get("timeout_sec", 3600))
+
+    def build_one(repo_focus: str) -> CommandResult:
+        focused_prompt = (
+            f"{prompt}\n\n## FOCUS\n"
+            f"Focus ONLY on `{repo_focus}/` directory in this iteration. "
+            f"Do not modify files outside `{repo_focus}/`."
+        )
+        cmd = [str(cfg.get("command", "kiro-cli")), "chat", "--no-interactive"]
+        if cfg.get("agent"):
+            cmd.extend(["--agent", str(cfg["agent"])])
+        if cfg.get("trust_all_tools"):
+            cmd.append("--trust-all-tools")
+        elif cfg.get("trust_tools"):
+            cmd.append("--trust-tools=" + str(cfg["trust_tools"]))
+        cmd.append(focused_prompt)
+        return run_command(f"kiro-builder-{repo_focus}", cmd, cwd=project_root, timeout_sec=timeout)
+
+    results: List[CommandResult] = []
+    with ThreadPoolExecutor(max_workers=min(len(sub_repos), 3)) as executor:
+        futures = {executor.submit(build_one, repo): repo for repo in sub_repos}
+        for future in as_completed(futures):
+            repo = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+                print(f"    [parallel] {repo} done ({result.seconds:.0f}s)")
+            except Exception as e:
+                print(f"    [parallel] {repo} failed: {e}")
+
+    # Merge results
+    combined_stdout = "\n".join(r.stdout for r in results if r.stdout)
+    combined_stderr = "\n".join(r.stderr for r in results if r.stderr)
+    max_time = max((r.seconds for r in results), default=0)
+    any_failed = any(not r.ok for r in results)
+
+    return CommandResult(
+        name="kiro-builder-parallel",
+        cmd=["parallel", str(len(sub_repos)), "builders"],
+        returncode=1 if any_failed else 0,
+        stdout=combined_stdout,
+        stderr=combined_stderr,
+        seconds=max_time,
     )
 
 
@@ -648,7 +740,16 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     builder_output = "DRY RUN or builder disabled: not executed."
                 else:
                     hash_before = worktree_hash(project_root)
-                    result = kiro_builder(config, project_root, build_prompt)
+                    # Detect sub-repos for parallel build
+                    sub_repos = sorted(
+                        d.name for d in project_root.iterdir()
+                        if d.is_dir() and (d / ".git").exists()
+                        and d.name not in {"ai-orchestrator-template"}
+                    )
+                    if len(sub_repos) > 1 and bi > 1:
+                        result = kiro_builder_parallel(config, project_root, build_prompt, sub_repos)
+                    else:
+                        result = kiro_builder(config, project_root, build_prompt)
                     write_result(review_dir / f"build_{bi:02d}_output.md", result)
                     builder_output = result.combined(limit=40000)
 
