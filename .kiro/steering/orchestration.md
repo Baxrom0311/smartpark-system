@@ -1,49 +1,86 @@
-# Orchestration steering
+# SADO Platform — Orchestration Steering
+
+## Project Overview
+
+SADO is an AI-powered speech therapy platform for children in Uzbekistan. It consists of 3 independent repositories built in parallel by the orchestrator.
 
 ## Architecture
 
 Three separate Kiro agents in a nested loop:
-- **ai-planner** (Opus): Creates plans, replans, auto-discovery. Read-only.
-- **ai-builder** (Opus/Sonnet): Makes code changes, runs verification. Write access.
-- **ai-reviewer** (Opus/Haiku): Reviews builder output. Read-only. Separate from planner.
+- **ai-planner** (Opus): Creates plans for all 3 repos, coordinates dependencies, decides build order
+- **ai-builder** (Opus): Makes code changes in one repo at a time, runs verification
+- **ai-reviewer** (Opus): Reviews builder output, ensures acceptance criteria are met
 
-## Loop structure
+## Three-Repo Strategy
+
+The builder must work on repos in this priority order:
+
+### Phase 1: Foundation (builds 1-50)
+1. **sado-api** — Set up FastAPI project, database models, auth, core CRUD endpoints
+2. **sado-admin** — Set up Vite+React project, routing, auth, layout shell
+3. **sado-mobile** — Set up Expo project, navigation, auth, basic screens
+
+### Phase 2: Core Features (builds 51-100)
+1. **sado-api** — Audio upload, Celery workers, ML scoring mock, all endpoints complete
+2. **sado-admin** — Dashboard, data tables, forms, charts, all CRUD pages
+3. **sado-mobile** — Assessment game flow, audio recording, results, exercises
+
+### Phase 3: Polish (builds 101-150)
+1. **sado-api** — Tests, error handling, Docker Compose, health checks
+2. **sado-admin** — i18n, dark mode, responsive, loading states, tests
+3. **sado-mobile** — Offline mode, animations, push notifications, tests
+
+## Git Strategy
+
+Each repo is created with `gh repo create --public`:
+```bash
+gh repo create sado-api --public --source=./sado-api --push
+gh repo create sado-admin --public --source=./sado-admin --push
+gh repo create sado-mobile --public --source=./sado-mobile --push
+```
+
+After each successful build, commit and push to the respective repo.
+
+## Loop Structure
 
 ```
-Plan → [Build × N → Test → Review] × M → Replan → repeat or done
+Plan → [Build × 8 → Test → Review] × 3 → Replan → repeat (5 cycles)
 ```
 
-## Reliability features
+Total capacity: 5 × 3 × 8 = 120 builds minimum, up to 150 max.
 
-- Checkpoint/Resume: `run_state.json` saved after each build
-- Error retry: exponential backoff with jitter (max 3 attempts)
-- Budget tracking: estimated cost per operation, hard limit stops loop
-- Metrics: duration, files changed, review pass rate → `metrics.json`
+## Builder Expectations
 
-## Planner expectations
+- **ALWAYS create real, working files.** No stubs, no TODOs, no "implement later" comments.
+- **One repo per build iteration.** Don't mix sado-api and sado-admin changes.
+- **Run verification after changes:**
+  - sado-api: `cd sado-api && python -m pytest -q`
+  - sado-admin: `cd sado-admin && npm run build`
+  - sado-mobile: `cd sado-mobile && npx tsc --noEmit`
+- **Create GitHub repos early** (first build iteration for each sub-project).
+- **Mock external services** — Whisper returns fake transcription, ML model returns random risk scores.
+- **Complete files** — Every file must be importable/compilable. No syntax errors.
 
-- Create actionable implementation plans with clear milestones
-- During replan: assess progress honestly, adjust cycle counts
-- Return structured JSON when requested
-- Do not edit files — read-only mode
+## Planner Expectations
 
-## Builder expectations
+- Plan all 3 repos together, noting dependencies (admin needs API endpoints to exist first)
+- Assign clear milestones per repo
+- During replan: check which acceptance criteria are met, focus on unmet ones
+- Coordinate: if admin needs `/api/v1/children` endpoint, ensure API builds it first
 
-- Make concrete edits every iteration
-- Follow the plan and reviewer feedback (feedback first)
-- Run verification after meaningful changes
-- End with JSON report: state, files_changed, summary
+## Reviewer Expectations
 
-## Reviewer expectations
-
-- Separate agent from planner (can use cheaper/faster model)
-- Focus on correctness, security, reliability, tests
-- Return structured JSON with verdict, defects, builder_prompt
-- Do not edit files — read-only mode
+- Check acceptance criteria from PROJECT_BRIEF.md
+- Verify TypeScript strict mode (no `any`)
+- Verify all endpoints have proper auth guards
+- Verify i18n strings are externalized
+- Verify offline support in mobile
+- If a repo doesn't build/compile, verdict = "needs_work" immediately
 
 ## Safety
 
-- Do not expose secrets
-- Do not run destructive commands outside the repository
+- No secrets in code (use .env.example)
+- No destructive git operations
+- No paid API calls (mock everything)
 - Budget limit enforced — loop stops when exhausted
-- Retry only on timeout/crash, not on logic errors
+- Each repo independently deployable

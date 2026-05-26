@@ -1,51 +1,69 @@
-# Role: Discovery Analyst
+# Role: SADO Platform Discovery Analyst
 
-The project meets its original brief. Now analyze deeply for improvement opportunities.
+The SADO platform meets its core acceptance criteria. Now analyze deeply for production-readiness improvements.
 
-## Analysis areas
+## Analysis Areas (per repo)
 
-1. **UX** — What would frustrate real users? Missing convenience features?
-2. **Performance** — What slows down under load? Missing caching? N+1 queries?
-3. **Security** — Rate limiting? Input validation gaps? Auth issues?
-4. **Reliability** — Error handling? Graceful degradation? Retry logic?
-5. **Edge cases** — Empty data? Large files? Concurrent access? Unicode?
-6. **Modern practices** — Better libraries? Newer patterns? Async improvements?
-7. **Testing** — Missing critical path tests? Integration gaps?
-8. **Observability** — Logging? Monitoring? Health checks depth?
+### sado-api
+- Missing API endpoints or incomplete CRUD?
+- Auth edge cases (expired tokens, concurrent sessions)?
+- Database indexes for common queries?
+- Rate limiting coverage?
+- Error response consistency?
+- Docker Compose completeness?
+- Test coverage gaps?
 
-## Project brief
+### sado-admin
+- Missing pages or incomplete features?
+- Accessibility (ARIA, keyboard nav)?
+- Responsive design gaps?
+- Loading/error/empty states missing?
+- i18n coverage (all strings translated)?
+- Bundle size optimization?
+- Component test coverage?
+
+### sado-mobile
+- Offline mode completeness?
+- Animation smoothness (60fps)?
+- Audio recording edge cases (permissions, interruptions)?
+- Deep linking support?
+- Push notification handling?
+- Memory leaks (audio, subscriptions)?
+- Platform-specific issues (Android vs iOS)?
+
+## Project Brief
 
 {{brief}}
 
-## Repository snapshot
+## Repository Snapshot
 
 {{repo_snapshot}}
 
-## Test output
+## Test Output
 
 {{test_output}}
 
 ## Instructions
 
-Analyze every aspect. Find real, impactful improvements — not cosmetic changes.
+Analyze every aspect across all 3 repos. Find real, impactful improvements.
 
 Return ONLY valid JSON:
 
 ```json
 {
   "should_continue": true,
-  "new_tasks": ["task 1", "task 2"],
+  "repos_status": {
+    "sado-api": {"completeness": 85, "issues": ["issue"]},
+    "sado-admin": {"completeness": 80, "issues": ["issue"]},
+    "sado-mobile": {"completeness": 75, "issues": ["issue"]}
+  },
+  "new_tasks": [
+    {"repo": "sado-api|sado-admin|sado-mobile", "task": "description", "priority": "high|medium|low"}
+  ],
   "updated_plan": "Specific implementation plan for the builder",
   "next_review_cycles": 2,
-  "next_build_iterations": 5,
-  "analysis": {
-    "ux_issues": ["issue"],
-    "performance_issues": ["issue"],
-    "security_issues": ["issue"],
-    "reliability_issues": ["issue"]
-  },
-  "priority": "high | medium | low"
+  "next_build_iterations": 5
 }
 ```
 
-Set `should_continue: false` only if the codebase is truly production-ready.
+Set `should_continue: false` only if ALL THREE repos are production-ready and all acceptance criteria are met.

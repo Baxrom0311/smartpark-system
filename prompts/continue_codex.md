@@ -1,53 +1,45 @@
 # Continue Building
 
-Build iteration {{build_iter}}/{{total_build_iters}}, review cycle {{review_cycle}}.
+You were building the SADO platform and got interrupted. Continue from where you left off.
 
-## Critical rules
+## Rules
+1. Check what exists in the repo snapshot
+2. Find the next unfinished task from the plan
+3. Implement it completely
+4. Run verification
+5. Report progress
 
-1. **You MUST make file changes.** Do not say "everything is done." Find the next task and implement it.
-2. **Follow the plan.** Pick the next unfinished item.
-3. **Fix reviewer issues first.** If feedback mentions problems, fix them before anything else.
-4. **Run verification after changes.**
+## Previous Output
 
-## Architecture plan
+{{previous_builder_output}}
+
+## Plan
 
 {{kiro_plan}}
 
-## Reviewer feedback (FIX THESE FIRST)
+## Reviewer Feedback
 
 {{previous_feedback}}
 
-## Repository snapshot
+## Repository Snapshot
 
 {{repo_snapshot}}
 
-## Project brief
+## Brief
 
 {{brief}}
 
-## What to do
+## Output
 
-1. Read the plan and feedback above.
-2. Identify what is NOT yet done.
-3. Implement it NOW.
-4. Run tests.
-5. Report what you changed.
-
-If the plan tasks are all done, look for:
-- Performance improvements
-- Missing error handling
-- Security hardening
-- Edge case fixes
-- Missing test coverage
-
-End with JSON:
-
+End with the standard JSON report:
 ```json
 {
-  "state": "in_progress | complete | blocked",
+  "state": "needs_review | complete | blocked",
+  "repo": "sado-api | sado-admin | sado-mobile",
   "summary": "What you changed",
   "files_changed": ["path/to/file"],
-  "verification": "Commands and results",
-  "next_suggested_task": "Next task"
+  "verification": "Commands run and results",
+  "next_suggested_task": "What should happen next",
+  "blockers": []
 }
 ```
