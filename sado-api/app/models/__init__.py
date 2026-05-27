@@ -25,6 +25,7 @@ from app.models.exercise import (
     ExerciseDifficulty,
 )
 from app.models.kindergarten import Kindergarten
+from app.models.notification import Notification, NotificationType
 from app.models.region import Region, RegionType
 from app.models.user import User, UserLanguage, UserRole
 
@@ -42,6 +43,8 @@ __all__ = [
     "ExerciseCategory",
     "ExerciseDifficulty",
     "Kindergarten",
+    "Notification",
+    "NotificationType",
     "RecordingTaskType",
     "Region",
     "RegionType",

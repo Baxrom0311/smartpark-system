@@ -42,11 +42,26 @@ from app.schemas.kindergarten import (
     KindergartenStats,
     KindergartenUpdate,
 )
+from app.schemas.notification import (
+    NotificationCreate,
+    NotificationPage,
+    NotificationPublic,
+    UnreadCountResponse,
+)
 from app.schemas.region import (
     RegionCreate,
     RegionPage,
     RegionPublic,
     RegionUpdate,
+)
+from app.schemas.stats import (
+    DailyAssessmentPoint,
+    KindergartenStatRow,
+    RegionStat,
+    RegionalStatsResponse,
+    RiskDistribution,
+    RolePopulation,
+    SystemStatsResponse,
 )
 from app.schemas.user import UserPublic, UserUpdate
 
@@ -64,6 +79,7 @@ __all__ = [
     "ChildPage",
     "ChildPublic",
     "ChildUpdate",
+    "DailyAssessmentPoint",
     "ExerciseAssignmentComplete",
     "ExerciseAssignmentCreate",
     "ExerciseAssignmentPage",
@@ -76,17 +92,27 @@ __all__ = [
     "KindergartenCreate",
     "KindergartenPage",
     "KindergartenPublic",
+    "KindergartenStatRow",
     "KindergartenStats",
     "KindergartenUpdate",
     "LoginRequest",
     "LogoutResponse",
+    "NotificationCreate",
+    "NotificationPage",
+    "NotificationPublic",
     "RefreshRequest",
     "RegionCreate",
     "RegionPage",
     "RegionPublic",
+    "RegionStat",
     "RegionUpdate",
+    "RegionalStatsResponse",
     "RegisterRequest",
+    "RiskDistribution",
+    "RolePopulation",
+    "SystemStatsResponse",
     "TokenPair",
+    "UnreadCountResponse",
     "UserPublic",
     "UserUpdate",
 ]
