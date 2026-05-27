@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initI18n } from "@/i18n/config";
 import { AUTH_EXPIRED_EVENT } from "@/services/api";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useAuthStore } from "@/stores/auth-store";
 
 // Keep splash visible while resources are loading. Hidden in the root effect.
@@ -40,6 +41,11 @@ export default function RootLayout(): React.ReactElement {
   // bootstrapping AND is authenticated — asking for notification
   // permission before they've signed in is jarring on iOS.
   useNotifications({ enabled: ready && authStatus === "authenticated" });
+
+  // Hydrate the offline queue + start the connectivity poller as soon
+  // as the user is signed in. The hook is a no-op until `enabled` so
+  // we don't probe the API during the splash screen.
+  useOfflineSync({ enabled: ready && authStatus === "authenticated" });
 
   useEffect(() => {
     let cancelled = false;

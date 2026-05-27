@@ -23,6 +23,7 @@ import { AudioPlayer } from "@/components/audio/AudioPlayer";
 import { AudioRecorder } from "@/components/audio/AudioRecorder";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { ProgressBar } from "@/components/game/ProgressBar";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { ApiError } from "@/services/api";
@@ -31,8 +32,9 @@ import {
   MIN_DURATION_SEC,
   deleteFile,
 } from "@/services/audio";
-import { uploadRecording } from "@/services/assessments";
+import { uploadOrQueueRecording } from "@/services/assessments";
 import { useAssessmentStore } from "@/stores/assessment-store";
+import { useOfflineStore } from "@/stores/offline-store";
 
 export default function AssessmentGameScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -47,6 +49,10 @@ export default function AssessmentGameScreen(): React.ReactElement {
   const recorder = useAudioRecorder(MAX_DURATION_SEC);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Refresh the offline store after a successful enqueue so the
+  // header badge updates without waiting for the next poll cycle.
+  const refreshOfflineStore = useOfflineStore((state) => state.refresh);
 
   const currentPrompt = useMemo(() => prompts[step] ?? null, [prompts, step]);
 
@@ -67,17 +73,29 @@ export default function AssessmentGameScreen(): React.ReactElement {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const uploaded = await uploadRecording({
-        assessmentId: assessment.id,
-        fileUri: recorder.result.uri,
-        contentType: recorder.result.contentType,
-        durationSec: recorder.result.durationSec,
-        taskType: currentPrompt.taskType,
-        prompt: currentPrompt.prompt,
-      });
-      appendRecording(uploaded);
-      // Best-effort: clean up the local file once the server has it.
-      void deleteFile(recorder.result.uri);
+      const result = await uploadOrQueueRecording(
+        {
+          assessmentId: assessment.id,
+          fileUri: recorder.result.uri,
+          contentType: recorder.result.contentType,
+          durationSec: recorder.result.durationSec,
+          taskType: currentPrompt.taskType,
+          prompt: currentPrompt.prompt,
+        },
+        { label: currentPrompt.prompt },
+      );
+
+      if (result.status === "uploaded") {
+        appendRecording(result.recording);
+        // Best-effort: clean up the local file once the server has it.
+        void deleteFile(recorder.result.uri);
+      } else {
+        // Queued for later — keep the local file alive until the queue
+        // confirms the upload (offline-queue stores only the path, not
+        // the bytes). Surface a non-blocking notice so the user knows.
+        await refreshOfflineStore();
+        Alert.alert(t("offline.queued"));
+      }
       recorder.reset();
 
       const next = step + 1;
@@ -103,14 +121,17 @@ export default function AssessmentGameScreen(): React.ReactElement {
     <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }}>
         <View className="gap-4">
-          <ProgressBar
-            current={step + 1}
-            total={totalSteps}
-            label={t("assessment.step", {
-              current: step + 1,
-              total: totalSteps,
-            })}
-          />
+          <View className="flex-row items-center justify-between">
+            <ProgressBar
+              current={step + 1}
+              total={totalSteps}
+              label={t("assessment.step", {
+                current: step + 1,
+                total: totalSteps,
+              })}
+            />
+          </View>
+          <OfflineIndicator hideWhenIdle />
 
           <Card variant="elevated" padding="lg">
             <Text className="text-sm font-medium text-neutral-500">

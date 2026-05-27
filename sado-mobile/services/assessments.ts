@@ -9,7 +9,11 @@
 
 import { Platform } from "react-native";
 
-import { apiClient } from "@/services/api";
+import { ApiError, apiClient } from "@/services/api";
+import {
+  enqueue as enqueueOffline,
+  type OfflineRecordingItem,
+} from "@/services/offline-queue";
 import type {
   Assessment,
   AssessmentAnalysis,
@@ -118,6 +122,78 @@ export async function uploadRecording(
       formData,
     },
   );
+}
+
+/**
+ * Result of {@link uploadOrQueueRecording} — either the upload
+ * succeeded and the API returned the new recording row, or the
+ * device was offline and we durably enqueued the payload for later.
+ */
+export type UploadOrQueueResult =
+  | { status: "uploaded"; recording: AudioRecording }
+  | { status: "queued"; queueItem: OfflineRecordingItem };
+
+/**
+ * Returns true when the failure looks like a connectivity problem we
+ * should fall back to the offline queue for. Real API errors (4xx or
+ * 5xx with a parsed body) bubble up so the UI surfaces them.
+ *
+ * Heuristic:
+ *   - `ApiError` with status 0 (synthesised by the client when fetch
+ *     itself rejected) → offline.
+ *   - `ApiError` with status >= 500 in dev environments where the
+ *     server is unreachable → offline.
+ *   - Plain `TypeError`/`Error` from `fetch` → offline.
+ */
+function isOfflineFailure(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 0 || error.status === 503 || error.status === 504;
+  }
+  if (error instanceof Error) {
+    const name = error.name.toLowerCase();
+    if (name === "aborterror") return false;
+    const message = error.message.toLowerCase();
+    return (
+      name === "typeerror" ||
+      message.includes("network request failed") ||
+      message.includes("failed to fetch") ||
+      message.includes("network error") ||
+      message.includes("timed out")
+    );
+  }
+  return false;
+}
+
+/**
+ * Try to upload immediately; on connectivity failure persist the
+ * payload to the offline queue so a later flush can retry. Returns a
+ * tagged result so callers can branch on `status`.
+ *
+ * Non-network errors (validation, auth, server bugs) re-throw —
+ * those are surfaced to the user and not retried.
+ */
+export async function uploadOrQueueRecording(
+  input: UploadRecordingInput,
+  options: { label?: string | null } = {},
+): Promise<UploadOrQueueResult> {
+  try {
+    const recording = await uploadRecording(input);
+    return { status: "uploaded", recording };
+  } catch (error) {
+    if (!isOfflineFailure(error)) {
+      throw error;
+    }
+    const queueItem = await enqueueOffline({
+      assessmentId: input.assessmentId,
+      fileUri: input.fileUri,
+      taskType: input.taskType,
+      contentType: input.contentType,
+      durationSec: input.durationSec,
+      prompt: input.prompt ?? null,
+      label: options.label ?? null,
+    });
+    return { status: "queued", queueItem };
+  }
 }
 
 export async function getAnalysis(

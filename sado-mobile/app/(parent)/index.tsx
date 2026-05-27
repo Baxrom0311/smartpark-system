@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { listAllChildren } from "@/services/children";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Child } from "@/types";
@@ -66,7 +67,10 @@ export default function ParentHomeScreen(): React.ReactElement {
             <Text className="text-2xl font-bold text-neutral-900">
               {t("home.greeting", { name: greetingName })}
             </Text>
-            <Badge tone="info" label={t("common.appName")} />
+            <View className="flex-row items-center gap-2">
+              <Badge tone="info" label={t("common.appName")} />
+              <OfflineIndicator hideWhenIdle />
+            </View>
           </View>
           <Button
             label={t("common.logout")}

@@ -24,6 +24,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { listAllKindergartens } from "@/services/kindergartens";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Kindergarten } from "@/types";
@@ -110,6 +111,9 @@ export default function TeacherHomeScreen(): React.ReactElement {
             <Text className="text-sm text-neutral-600">
               {t("teacher.subtitle", { name: user?.full_name ?? "" })}
             </Text>
+            <View className="mt-1">
+              <OfflineIndicator hideWhenIdle />
+            </View>
           </View>
           <Button
             label={t("common.logout")}

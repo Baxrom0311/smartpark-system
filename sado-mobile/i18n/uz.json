@@ -230,5 +230,15 @@
     "reminderBody": "Bugun {name} bilan qisqa nutq mashqini o'tkazish vaqti keldi.",
     "scheduled": "Eslatma {{date}} ga belgilandi",
     "cancelled": "Eslatma bekor qilindi"
+  },
+  "offline": {
+    "online": "Onlayn",
+    "offline": "Oflayn",
+    "pending": "{{count}} ta yozuv navbatda",
+    "deadLetter": "{{count}} ta yozuv yuborilmadi",
+    "queued": "Yozuv saqlandi va internet paydo bo'lganda yuboriladi",
+    "queueFull": "Yozuvni saqlab bo'lmadi",
+    "syncing": "Sinxronlash…",
+    "retry": "Qayta urinish"
   }
 }
