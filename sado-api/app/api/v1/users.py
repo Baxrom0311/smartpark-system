@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy import and_, or_, select
 
 from app.api.deps import CurrentUser, DBSession, get_current_user, require_roles
@@ -23,8 +23,9 @@ from app.core.pagination import (
     decode_cursor,
     encode_cursor,
 )
+from app.core.security import hash_password
 from app.models.user import User, UserRole
-from app.schemas.user import UserPublic, UserUpdate
+from app.schemas.user import UserCreate, UserPublic, UserUpdate
 
 router = APIRouter()
 
@@ -75,6 +76,71 @@ async def update_me(
         user.region_id = data["region_id"]
 
     await session.commit()
+    await session.refresh(user)
+    return UserPublic.model_validate(user)
+
+
+@router.post(
+    "/users",
+    response_model=UserPublic,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a user (admin only)",
+    dependencies=[Depends(require_roles(UserRole.ADMIN))],
+)
+async def create_user(
+    payload: UserCreate,
+    session: DBSession,
+) -> UserPublic:
+    """Admin-only user creation.
+
+    Unlike ``/auth/register``, this allows admins to provision staff
+    accounts (therapist, admin) and to seed users that arrive via
+    out-of-band channels (e.g. import). Email/phone uniqueness is
+    enforced at the DB level; we surface conflicts as 409.
+    """
+
+    identifiers: list = []
+    if payload.email:
+        identifiers.append(User.email == payload.email)
+    if payload.phone:
+        identifiers.append(User.phone == payload.phone)
+    if identifiers:
+        existing = await session.execute(select(User).where(or_(*identifiers)))
+        if existing.scalar_one_or_none() is not None:
+            raise ConflictError(
+                "An account with that email or phone already exists.",
+                code="USER_EXISTS",
+            )
+
+    role_value = (
+        payload.role.value if isinstance(payload.role, UserRole) else str(payload.role)
+    )
+    language_value = (
+        payload.language.value
+        if hasattr(payload.language, "value")
+        else str(payload.language)
+    )
+
+    user = User(
+        email=payload.email,
+        phone=payload.phone,
+        password_hash=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=role_value,
+        language=language_value,
+        is_active=payload.is_active,
+        is_verified=payload.is_verified,
+        region_id=payload.region_id,
+    )
+    session.add(user)
+    try:
+        await session.commit()
+    except Exception as exc:  # pragma: no cover - race on unique
+        await session.rollback()
+        raise ConflictError(
+            "An account with that email or phone already exists.",
+            code="USER_EXISTS",
+        ) from exc
     await session.refresh(user)
     return UserPublic.model_validate(user)
 

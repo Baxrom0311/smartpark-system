@@ -3,6 +3,7 @@ import {
   createColumnHelper,
   type ColumnDef,
 } from "@tanstack/react-table";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +11,10 @@ import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { UserCreateDialog } from "@/components/users/user-create-dialog";
 import { useUsers } from "@/hooks/queries/use-users";
+import { useAuthStore } from "@/stores/auth-store";
 import type { UserPublic, UserRole } from "@/types";
 
 export const Route = createFileRoute("/_authenticated/users/")({
@@ -37,6 +41,9 @@ function UsersPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"" | UserRole>("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const me = useAuthStore((s) => s.user);
+  const isAdmin = me?.role === "admin";
 
   const query = useUsers({
     search: search || undefined,
@@ -99,7 +106,22 @@ function UsersPage() {
       <PageHeader
         title={t("nav.users")}
         description={t("users.description")}
+        actions={
+          isAdmin ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden />
+              {t("users.create.button")}
+            </Button>
+          ) : undefined
+        }
       />
+
+      {isAdmin && (
+        <UserCreateDialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+        />
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <SearchInput

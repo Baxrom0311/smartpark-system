@@ -161,3 +161,103 @@ async def test_admin_cannot_self_deactivate(client, app) -> None:
     # ValidationError → 422 in this codebase, with a SELF_DEACTIVATION code.
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "SELF_DEACTIVATION"
+
+
+
+async def test_admin_can_create_user_with_any_role(client, app) -> None:
+    """``POST /users`` lets an admin provision staff accounts.
+
+    Unlike ``/auth/register`` which forbids admin/therapist roles,
+    the admin endpoint must allow them.
+    """
+
+    await _create_admin(app)
+    admin_h = await _login_admin(client)
+
+    payload = {
+        "email": "new.therapist@sado.uz",
+        "password": "Sup3r-Secret!",
+        "full_name": "Created Therapist",
+        "role": "therapist",
+        "language": "ru",
+    }
+    response = await client.post("/api/v1/users", json=payload, headers=admin_h)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["email"] == "new.therapist@sado.uz"
+    assert body["role"] == "therapist"
+    assert body["language"] == "ru"
+    assert body["is_active"] is True
+
+
+async def test_admin_create_user_rejects_duplicate_email(client, app) -> None:
+    user, _ = await _register_and_login(client, idx=1)
+    await _create_admin(app)
+    admin_h = await _login_admin(client)
+
+    response = await client.post(
+        "/api/v1/users",
+        json={
+            "email": user["email"],
+            "password": "Sup3r-Secret!",
+            "full_name": "Duplicate",
+            "role": "parent",
+        },
+        headers=admin_h,
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "USER_EXISTS"
+
+
+async def test_admin_create_user_requires_email_or_phone(client, app) -> None:
+    await _create_admin(app)
+    admin_h = await _login_admin(client)
+
+    response = await client.post(
+        "/api/v1/users",
+        json={
+            "password": "Sup3r-Secret!",
+            "full_name": "No Identifier",
+            "role": "parent",
+        },
+        headers=admin_h,
+    )
+    # Pydantic validation rejects the payload before it reaches the handler.
+    assert response.status_code == 422, response.text
+
+
+async def test_non_admin_cannot_create_user(client, app) -> None:
+    _, parent_h = await _register_and_login(client, idx=1)
+
+    response = await client.post(
+        "/api/v1/users",
+        json={
+            "email": "another@example.com",
+            "password": "Sup3r-Secret!",
+            "full_name": "Another",
+            "role": "parent",
+        },
+        headers=parent_h,
+    )
+    assert response.status_code == 403
+
+
+async def test_admin_create_user_with_phone_only(client, app) -> None:
+    await _create_admin(app)
+    admin_h = await _login_admin(client)
+
+    response = await client.post(
+        "/api/v1/users",
+        json={
+            "phone": "+998901112233",
+            "password": "Sup3r-Secret!",
+            "full_name": "Phone User",
+            "role": "teacher",
+        },
+        headers=admin_h,
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["phone"] == "+998901112233"
+    assert body["email"] is None
+    assert body["role"] == "teacher"

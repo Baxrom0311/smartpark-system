@@ -101,6 +101,15 @@
       "therapist": "Logopedlar",
       "admin": "Adminlar"
     },
+    "create": {
+      "button": "Yangi foydalanuvchi",
+      "title": "Foydalanuvchi yaratish",
+      "subtitle": "Tizimga yangi foydalanuvchi qo'shing. Admin yoki logoped rolini ham tanlash mumkin.",
+      "submit": "Yaratish",
+      "passwordHint": "Kamida 8 belgi. Foydalanuvchiga xavfsiz parolni alohida yuboring.",
+      "activeOnCreate": "Yaratilgandan keyin darhol faollashtirish",
+      "errorDuplicate": "Bunday elektron pochta yoki telefon bilan foydalanuvchi mavjud"
+    },
     "detail": {
       "subtitle": "Foydalanuvchi ma'lumotlari va sozlamalari",
       "summary": "Profil",
