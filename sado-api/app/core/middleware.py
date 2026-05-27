@@ -16,6 +16,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -66,12 +67,17 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
+        # ``exc.errors()`` may contain non-JSON-serializable objects (the
+        # original ``ValueError`` from a Pydantic ``model_validator`` shows
+        # up under ``ctx.error``). ``jsonable_encoder`` converts those to
+        # repr strings.
+        errors = jsonable_encoder(exc.errors())
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=_error_payload(
                 "Request validation failed",
                 "VALIDATION_ERROR",
-                {"errors": exc.errors()},
+                {"errors": errors},
             ),
         )
 

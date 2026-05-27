@@ -18,6 +18,8 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET", "test-secret-which-is-long-enough-1234567890")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_sado.db")
 os.environ.setdefault("CELERY_TASK_ALWAYS_EAGER", "true")
+# Loose rate limit so each test can issue plenty of /auth requests.
+os.environ.setdefault("RATE_LIMIT_AUTH_PER_MINUTE", "1000")
 
 
 @pytest.fixture(scope="session")
@@ -25,15 +27,26 @@ def anyio_backend() -> str:
     return "asyncio"
 
 
-@pytest.fixture()
-def app():
-    """Return a fresh FastAPI app instance for each test."""
+@pytest_asyncio.fixture()
+async def app():
+    """Return a fresh FastAPI app instance with a clean schema."""
 
     from app.config import get_settings
+    from app.core.rate_limit import reset_auth_rate_limiter
+    from app.database import create_all, drop_all, reset_engine
     from app.main import create_app
+    from app.services.auth import get_deny_list
 
     get_settings.cache_clear()
-    return create_app()
+    await reset_engine()
+    await reset_auth_rate_limiter()
+    await get_deny_list().clear()
+    await create_all()
+    try:
+        yield create_app()
+    finally:
+        await drop_all()
+        await reset_engine()
 
 
 @pytest_asyncio.fixture()
