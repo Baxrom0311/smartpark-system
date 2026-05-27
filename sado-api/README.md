@@ -37,8 +37,55 @@ Then open:
 
 The default configuration uses **SQLite** (`./sado.db`) so the API
 boots with no external dependencies. Postgres / Redis / MinIO are only
-required for the production-style stack (Docker Compose, added in a
-later milestone).
+required for the production-style stack (see [Docker Compose](#docker-compose)
+below).
+
+---
+
+## Docker Compose
+
+A full stack — API, Celery worker, Postgres, Redis, MinIO — is
+described in [`docker-compose.yml`](./docker-compose.yml).
+
+```bash
+# 1. seed environment variables (JWT_SECRET is mandatory)
+cp .env.example .env
+sed -i.bak 's|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://sado:sado@db:5432/sado|' .env
+sed -i.bak 's|^REDIS_URL=.*|REDIS_URL=redis://redis:6379/0|' .env
+sed -i.bak 's|^MINIO_ENDPOINT=.*|MINIO_ENDPOINT=http://minio:9000|' .env
+sed -i.bak 's|^CELERY_BROKER_URL=.*|CELERY_BROKER_URL=redis://redis:6379/1|' .env
+sed -i.bak 's|^CELERY_RESULT_BACKEND=.*|CELERY_RESULT_BACKEND=redis://redis:6379/2|' .env
+rm -f .env.bak
+
+# 2. build & launch
+docker compose up --build
+
+# 3. verify
+curl http://localhost:8000/api/v1/health
+open http://localhost:9001          # MinIO console (minioadmin / minioadmin)
+```
+
+Services exposed on the host:
+
+| Service | Port  | Notes                                           |
+| ------- | ----- | ----------------------------------------------- |
+| api     | 8000  | FastAPI / Swagger UI at `/docs`                 |
+| db      | 5432  | PostgreSQL 16 — credentials in `.env`           |
+| redis   | 6379  | Redis 7 with append-only persistence            |
+| minio   | 9000  | S3 API endpoint                                 |
+| minio   | 9001  | MinIO web console                               |
+
+The `api` service runs `alembic upgrade head` on startup, so schema
+migrations are applied automatically. The `createbuckets` one-shot
+container provisions the audio bucket (`sado-audio` by default).
+
+The image is built once and reused for the `worker` (Celery) service —
+`command:` selects between `uvicorn` and `celery worker`. To validate
+the compose file without building images:
+
+```bash
+JWT_SECRET=ci-test-secret-please-rotate docker compose config -q
+```
 
 ---
 
@@ -100,9 +147,9 @@ keys:
 The implementation follows the milestone plan in
 [`../PROJECT_BRIEF.md`](../PROJECT_BRIEF.md):
 
-1. **Foundation** — scaffold, DB models, JWT auth, core CRUD ✅ in progress
-2. **Core features** — audio upload, Celery workers, ML scoring mock
-3. **Polish** — tests, error handling, Docker Compose, health checks
+1. **Foundation** — scaffold, DB models, JWT auth, core CRUD ✅
+2. **Core features** — audio upload, Celery workers, ML scoring mock ✅
+3. **Polish** — tests, error handling, **Docker Compose** ✅, health checks ✅, CI (next)
 
 External services (Whisper, XGBoost, push notifications) are mocked
 with deterministic fakes for local development; nothing in this repo
