@@ -19,7 +19,14 @@ import type { ReactElement, ReactNode } from "react";
 import type { CursorPage, Notification, UnreadCountResponse } from "@/types";
 
 // `react-i18next` is mocked across the suite to keep tests synchronous.
+// We must keep `initReactI18next` exported so `@/i18n/config` (transitively
+// loaded via `@/lib/notify`) can plug it into the i18n instance during
+// module evaluation.
 vi.mock("react-i18next", () => ({
+  initReactI18next: {
+    type: "3rdParty" as const,
+    init: () => undefined,
+  },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (opts && "count" in opts) return `${key}:${String(opts.count)}`;

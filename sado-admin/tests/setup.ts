@@ -8,6 +8,21 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 
+// Globally mock sonner so mutation toasts triggered during component
+// tests don't try to attach DOM portals or animate. Tests that need to
+// assert toast behaviour can re-import this mock through `vi.mocked`.
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    message: vi.fn(),
+    dismiss: vi.fn(),
+  },
+  Toaster: () => null,
+}));
+
 // jsdom does not implement `matchMedia`; ui-store reads it on init.
 if (typeof window !== "undefined" && !window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {

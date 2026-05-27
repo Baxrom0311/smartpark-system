@@ -24,6 +24,7 @@ import { FormantChart } from "@/components/analysis/formant-chart";
 import { MfccChart } from "@/components/analysis/mfcc-chart";
 import { PhonemeChart } from "@/components/analysis/phoneme-chart";
 import { PitchChart } from "@/components/analysis/pitch-chart";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { RiskBadge } from "@/components/shared/risk-badge";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +120,7 @@ function AnalysisDetailPage() {
   return (
     <div className="flex flex-col gap-6">
       <BackLink />
+      <Breadcrumbs />
       <PageHeader
         title={t("analysis.title")}
         description={t("analysis.subtitle")}

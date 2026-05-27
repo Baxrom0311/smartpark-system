@@ -189,6 +189,8 @@ function ChildDetailPage() {
         <ArrowLeft className="h-4 w-4" /> {t("common.back")}
       </button>
 
+      <Breadcrumbs />
+
       <PageHeader
         title={child.name}
         description={t("children.detail.subtitle")}

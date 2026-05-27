@@ -42,6 +42,7 @@ import { z } from "zod";
 
 import { InfoRow } from "@/components/shared/info-row";
 import { PageHeader } from "@/components/shared/page-header";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -274,6 +275,8 @@ function ExerciseDetailPage() {
       >
         <ArrowLeft className="h-4 w-4" /> {t("common.back")}
       </button>
+
+      <Breadcrumbs />
 
       <PageHeader
         title={exercise.title}
