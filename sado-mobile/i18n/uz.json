@@ -125,7 +125,11 @@
     "explanationRed": "Mutaxassis maslahati tavsiya etiladi. Yaqin atrofingizdagi logopedga murojaat qiling.",
     "tasks": "Bajarilgan vazifalar",
     "noResults": "Natijalar mavjud emas",
-    "backHome": "Bosh sahifaga"
+    "backHome": "Bosh sahifaga",
+    "nextReminderScheduled": "Keyingi eslatma {{date}} ga belgilandi",
+    "remindersDisabledHint": "Avtomatik eslatmalarni Sozlamalardan yoqing",
+    "remindersPermissionHint": "Bildirishnomalarga ruxsat bering, biz keyingi baholashni eslataylik",
+    "defaultChildName": "Bolangiz"
   },
   "exercises": {
     "title": "Mashqlar",

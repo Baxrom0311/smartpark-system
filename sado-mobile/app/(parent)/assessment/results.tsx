@@ -7,10 +7,15 @@
  * home screen.
  *
  * Polling is bounded — TanStack Query stops when status is in a
- * terminal state.
+ * terminal state. When the assessment reaches `completed` we also
+ * fire `scheduleNextAssessmentReminder` so the parent's chosen
+ * cadence is respected without forcing them to open the Settings
+ * screen. The scheduler is idempotent: it dedupes on `assessmentId`,
+ * skips when reminders are disabled in preferences, and never
+ * prompts the user for permission.
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -21,6 +26,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { getAnalysis } from "@/services/assessments";
+import { getChild } from "@/services/children";
+import {
+  scheduleNextAssessmentReminder,
+  type ScheduleNextAssessmentResult,
+} from "@/services/reminder-scheduler";
 import { useAssessmentStore } from "@/stores/assessment-store";
 import type { AssessmentAnalysis, RiskLevel } from "@/types";
 
@@ -43,7 +53,11 @@ function riskLabelKey(risk: RiskLevel | null): string {
 export default function AssessmentResultsScreen(): React.ReactElement {
   const { t } = useTranslation();
   const assessment = useAssessmentStore((state) => state.assessment);
+  const childId = useAssessmentStore((state) => state.childId);
   const reset = useAssessmentStore((state) => state.reset);
+  const [reminderResult, setReminderResult] =
+    useState<ScheduleNextAssessmentResult | null>(null);
+  const scheduledForAssessmentRef = useRef<string | null>(null);
 
   const analysisQuery = useQuery<AssessmentAnalysis>({
     queryKey: ["analysis", assessment?.id ?? ""],
@@ -59,22 +73,95 @@ export default function AssessmentResultsScreen(): React.ReactElement {
     },
   });
 
-  useEffect(() => {
-    return () => {
-      // Reset the in-memory assessment session when the user leaves
-      // the results screen so a fresh assessment starts cleanly.
-    };
-  }, []);
-
   const analysis = analysisQuery.data;
   const isPolling =
     analysis == null || !TERMINAL_STATUSES.has(analysis.status);
+
+  // Auto-schedule the next assessment reminder once the analysis
+  // resolves to `completed`. The scheduler itself is idempotent for
+  // a given assessmentId, but we additionally guard with a ref so we
+  // don't fire a redundant async call on every refetch.
+  useEffect(() => {
+    if (!analysis || !assessment) return;
+    if (analysis.status !== "completed") return;
+    if (scheduledForAssessmentRef.current === assessment.id) return;
+    scheduledForAssessmentRef.current = assessment.id;
+
+    const titleTemplate = t("notifications.reminderTitle");
+    const bodyTemplate = t("notifications.reminderBody");
+    const targetChildId = childId ?? null;
+
+    void (async (): Promise<void> => {
+      try {
+        let childName = t("results.defaultChildName");
+        if (targetChildId) {
+          try {
+            const child = await getChild(targetChildId);
+            childName = child.name;
+          } catch {
+            // Network/permission failure resolving the child name is
+            // not fatal — fall back to the localised default.
+          }
+        }
+        const result = await scheduleNextAssessmentReminder({
+          assessmentId: assessment.id,
+          childId: targetChildId ?? "unknown",
+          childName,
+          titleTemplate,
+          bodyTemplate,
+        });
+        setReminderResult(result);
+      } catch {
+        // Notification scheduling is a progressive enhancement —
+        // never block the results UI.
+        setReminderResult({
+          status: "skipped",
+          reason: "scheduling-failed",
+          preferences: {
+            enabled: false,
+            frequency: "weekly",
+            lastScheduledAt: null,
+            lastScheduledAssessmentId: null,
+          },
+        });
+      }
+    })();
+  }, [analysis, assessment, childId, t]);
 
   const overall: RiskLevel | null = analysis?.overall_risk ?? null;
   const confidencePercent = useMemo(() => {
     if (analysis?.overall_confidence == null) return null;
     return Math.round(analysis.overall_confidence * 100);
   }, [analysis?.overall_confidence]);
+
+  const reminderMessage = useMemo<string | null>(() => {
+    if (!reminderResult) return null;
+    if (reminderResult.status === "scheduled") {
+      return t("results.nextReminderScheduled", {
+        date: reminderResult.scheduledFor.toLocaleDateString(),
+      });
+    }
+    if (reminderResult.reason === "already-scheduled") {
+      const iso = reminderResult.preferences.lastScheduledAt;
+      if (iso) {
+        try {
+          return t("results.nextReminderScheduled", {
+            date: new Date(iso).toLocaleDateString(),
+          });
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+    if (reminderResult.reason === "reminders-disabled") {
+      return t("results.remindersDisabledHint");
+    }
+    if (reminderResult.reason === "permission-denied") {
+      return t("results.remindersPermissionHint");
+    }
+    return null;
+  }, [reminderResult, t]);
 
   const handleHome = (): void => {
     reset();
@@ -132,6 +219,17 @@ export default function AssessmentResultsScreen(): React.ReactElement {
               {t(explanationKey(overall))}
             </Text>
           )}
+
+          {reminderMessage ? (
+            <View
+              accessibilityRole="alert"
+              className="mt-4 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2"
+            >
+              <Text className="text-sm font-medium text-primary-700">
+                {reminderMessage}
+              </Text>
+            </View>
+          ) : null}
         </Card>
 
         {analysis && analysis.results.length > 0 ? (

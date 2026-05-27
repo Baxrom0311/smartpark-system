@@ -58,6 +58,7 @@ describe("preferences service", () => {
       enabled: true,
       frequency: "biweekly",
       lastScheduledAt: "2026-01-01T00:00:00.000Z",
+      lastScheduledAssessmentId: "assessment-42",
     };
     await writeReminderPreferences(payload);
     expect(await readReminderPreferences()).toEqual(payload);
@@ -85,6 +86,7 @@ describe("preferences service", () => {
       enabled: false,
       frequency: "weekly",
       lastScheduledAt: null,
+      lastScheduledAssessmentId: null,
     });
     const result = await updateReminderPreferences({ enabled: true });
     expect(result.enabled).toBe(true);
@@ -96,6 +98,7 @@ describe("preferences service", () => {
       enabled: true,
       frequency: "monthly",
       lastScheduledAt: null,
+      lastScheduledAssessmentId: null,
     });
     expect(memory.has(__testing.STORAGE_KEY)).toBe(true);
     await clearReminderPreferences();

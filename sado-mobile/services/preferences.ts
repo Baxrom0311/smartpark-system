@@ -23,6 +23,14 @@ export interface AssessmentReminderPreferences {
   frequency: ReminderFrequency;
   /** ISO timestamp of the last successful schedule, for diagnostics. */
   lastScheduledAt: string | null;
+  /**
+   * The id of the last assessment that drove an auto-scheduled
+   * reminder. The results screen polls until status==completed and
+   * the analysis query may refetch the same payload several times —
+   * we use this id to make the auto-scheduler idempotent for a
+   * given assessment.
+   */
+  lastScheduledAssessmentId: string | null;
 }
 
 const STORAGE_KEY = "sado.mobile.preferences.v1";
@@ -31,6 +39,7 @@ const DEFAULTS: AssessmentReminderPreferences = {
   enabled: false,
   frequency: "weekly",
   lastScheduledAt: null,
+  lastScheduledAssessmentId: null,
 };
 
 function isFrequency(value: unknown): value is ReminderFrequency {
@@ -53,6 +62,10 @@ function normalise(
     lastScheduledAt:
       typeof candidate.lastScheduledAt === "string"
         ? candidate.lastScheduledAt
+        : null,
+    lastScheduledAssessmentId:
+      typeof candidate.lastScheduledAssessmentId === "string"
+        ? candidate.lastScheduledAssessmentId
         : null,
   };
 }
