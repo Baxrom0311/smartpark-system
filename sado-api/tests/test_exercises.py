@@ -550,3 +550,163 @@ async def test_admin_can_filter_inactive_and_delete(client, app) -> None:
         f"/api/v1/exercises/{ex_id}", headers=a_headers
     )
     assert deleted.status_code == 204
+
+
+# ----------------------------------------------------------- Asset upload
+
+
+async def _create_exercise_for_assets(client, headers) -> str:
+    response = await client.post(
+        "/api/v1/exercises",
+        json={
+            "title": "Asset upload target",
+            "category": "articulation",
+            "age_group": "4-5",
+            "difficulty": "easy",
+            "language": "uz",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+async def test_upload_audio_asset_as_therapist(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    files = {"file": ("hello.mp3", b"\x49\x44\x33fake-audio", "audio/mpeg")}
+    response = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "audio"},
+        files=files,
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["audio_example_path"] is not None
+    assert payload["audio_example_path"].startswith(f"exercises/{ex_id}/audio/")
+    assert payload["audio_example_path"].endswith(".mp3")
+    # Image slot must remain untouched.
+    assert payload["image_path"] is None
+
+
+async def test_upload_image_asset_replaces_previous(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    first = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "image"},
+        files={"file": ("a.png", b"\x89PNG\r\n\x1a\nfake", "image/png")},
+        headers=headers,
+    )
+    assert first.status_code == 200
+    first_key = first.json()["image_path"]
+    assert first_key is not None
+
+    second = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "image"},
+        files={"file": ("b.jpg", b"\xff\xd8\xff\xe0jpeg-fake", "image/jpeg")},
+        headers=headers,
+    )
+    assert second.status_code == 200
+    second_key = second.json()["image_path"]
+    assert second_key is not None
+    assert second_key != first_key
+    assert second_key.endswith(".jpg")
+
+
+async def test_upload_asset_rejects_invalid_content_type(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    response = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "audio"},
+        files={"file": ("payload.txt", b"hello", "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "INVALID_ASSET_TYPE"
+
+
+async def test_upload_asset_rejects_empty_file(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    response = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "image"},
+        files={"file": ("empty.png", b"", "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "ASSET_EMPTY"
+
+
+async def test_upload_asset_forbidden_for_parent(client, app) -> None:
+    # First, create the exercise with an admin so it exists.
+    await _create_admin(app)
+    a_headers = await _login_admin(client)
+    ex_id = await _create_exercise_for_assets(client, a_headers)
+
+    _, p_headers = await _register_and_login(client, idx=99, role="parent")
+    response = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "audio"},
+        files={"file": ("x.mp3", b"data", "audio/mpeg")},
+        headers=p_headers,
+    )
+    assert response.status_code == 403
+
+
+async def test_upload_asset_404_for_unknown_exercise(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    response = await client.post(
+        "/api/v1/exercises/00000000-0000-0000-0000-000000000000/assets",
+        data={"asset_type": "audio"},
+        files={"file": ("x.mp3", b"data", "audio/mpeg")},
+        headers=headers,
+    )
+    assert response.status_code == 404
+
+
+async def test_delete_asset_clears_path(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    upload = await client.post(
+        f"/api/v1/exercises/{ex_id}/assets",
+        data={"asset_type": "audio"},
+        files={"file": ("a.mp3", b"\x49\x44\x33fake", "audio/mpeg")},
+        headers=headers,
+    )
+    assert upload.status_code == 200
+    assert upload.json()["audio_example_path"] is not None
+
+    response = await client.delete(
+        f"/api/v1/exercises/{ex_id}/assets/audio", headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json()["audio_example_path"] is None
+
+
+async def test_delete_asset_idempotent_when_missing(client, app) -> None:
+    await _create_therapist(app)
+    headers = await _login_therapist(client)
+    ex_id = await _create_exercise_for_assets(client, headers)
+
+    response = await client.delete(
+        f"/api/v1/exercises/{ex_id}/assets/image", headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json()["image_path"] is None

@@ -14,15 +14,19 @@ Authorisation summary:
 
 from __future__ import annotations
 
+import logging
+import uuid
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
+from urllib.parse import quote
 
-from fastapi import APIRouter, Path, Query, Response, status
+from fastapi import APIRouter, File, Form, Path, Query, Response, UploadFile, status
 from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import CurrentUser, DBSession
+from app.config import get_settings
 from app.core.exceptions import (
     ConflictError,
     ForbiddenError,
@@ -57,6 +61,7 @@ from app.schemas.exercise import (
     ExercisePublic,
     ExerciseUpdate,
 )
+from app.services.storage import get_audio_storage
 
 router = APIRouter()
 
@@ -365,6 +370,216 @@ async def delete_exercise(
     await session.delete(exercise)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --------------------------------------------------------- Asset upload
+
+logger = logging.getLogger(__name__)
+
+# What we'll accept on the asset upload endpoint. The storage layer
+# itself doesn't care about content types, but we limit them here so a
+# user can't paste a binary blob and call it an "audio example".
+ALLOWED_AUDIO_TYPES = {
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/ogg",
+    "audio/webm",
+    "audio/flac",
+}
+ALLOWED_IMAGE_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/gif",
+    "image/svg+xml",
+}
+
+# Per-file size limits — keep audio examples small so the catalogue
+# doesn't bloat MinIO storage.
+MAX_AUDIO_BYTES = 5 * 1024 * 1024
+MAX_IMAGE_BYTES = 2 * 1024 * 1024
+
+_AUDIO_EXTENSIONS = {
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/wave": "wav",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/mp4": "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/aac": "aac",
+    "audio/ogg": "ogg",
+    "audio/webm": "webm",
+    "audio/flac": "flac",
+}
+_IMAGE_EXTENSIONS = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/svg+xml": "svg",
+}
+
+
+def _build_asset_key(
+    *, exercise_id: str, asset_type: str, asset_id: str, content_type: str
+) -> str:
+    """Deterministic storage key per asset.
+
+    Layout: ``exercises/{id}/{type}/{asset_id}.{ext}``.
+    """
+
+    if asset_type == "audio":
+        ext = _AUDIO_EXTENSIONS.get(content_type, "bin")
+    else:
+        ext = _IMAGE_EXTENSIONS.get(content_type, "bin")
+    safe_exercise = quote(exercise_id, safe="")
+    safe_asset = quote(asset_id, safe="")
+    return f"exercises/{safe_exercise}/{asset_type}/{safe_asset}.{ext}"
+
+
+@router.post(
+    "/exercises/{exercise_id}/assets",
+    response_model=ExercisePublic,
+    summary="Upload an audio or image example for an exercise",
+)
+async def upload_exercise_asset(
+    user: CurrentUser,
+    session: DBSession,
+    exercise_id: Annotated[str, Path(min_length=1, max_length=36)],
+    file: Annotated[UploadFile, File(description="Audio or image file")],
+    asset_type: Annotated[
+        Literal["audio", "image"],
+        Form(description="Which slot to update — 'audio' or 'image'"),
+    ],
+) -> ExercisePublic:
+    """Persist a multipart audio/image asset for an exercise.
+
+    The previous file (if any) is best-effort deleted so the bucket
+    doesn't accumulate orphaned objects. Storage failures during the
+    cleanup are logged but never block the upload.
+    """
+
+    if not _can_manage_exercises(user):
+        raise ForbiddenError(
+            "Only therapists and admins may upload exercise assets.",
+            code="EXERCISE_FORBIDDEN",
+        )
+
+    exercise = await _load_exercise_or_404(session, exercise_id)
+
+    settings = get_settings()
+    content_type = (file.content_type or "").lower().strip()
+    if asset_type == "audio":
+        allowed = ALLOWED_AUDIO_TYPES
+        max_bytes = MAX_AUDIO_BYTES
+        slot = "audio_example_path"
+    else:
+        allowed = ALLOWED_IMAGE_TYPES
+        max_bytes = MAX_IMAGE_BYTES
+        slot = "image_path"
+
+    if content_type not in allowed:
+        raise ValidationError(
+            f"content_type {content_type or 'unknown'!r} is not accepted for "
+            f"asset_type={asset_type!r}",
+            code="INVALID_ASSET_TYPE",
+        )
+
+    raw = await file.read()
+    if not raw:
+        raise ValidationError(
+            "uploaded file is empty", code="ASSET_EMPTY"
+        )
+    if len(raw) > max_bytes:
+        raise ValidationError(
+            f"{asset_type} asset is {len(raw) / (1024 * 1024):.2f} MB — "
+            f"limit is {max_bytes // (1024 * 1024)} MB",
+            code="ASSET_TOO_LARGE",
+        )
+
+    asset_id = str(uuid.uuid4())
+    storage_key = _build_asset_key(
+        exercise_id=exercise.id,
+        asset_type=asset_type,
+        asset_id=asset_id,
+        content_type=content_type,
+    )
+
+    storage = get_audio_storage()
+    stored = await storage.put_object(
+        key=storage_key, data=raw, content_type=content_type
+    )
+
+    previous_key = getattr(exercise, slot)
+    setattr(exercise, slot, stored.storage_key)
+    await session.commit()
+    await session.refresh(exercise)
+
+    if previous_key and previous_key != stored.storage_key:
+        try:
+            await storage.delete_object(previous_key)
+        except Exception as exc:  # pragma: no cover - best effort
+            logger.warning(
+                "Could not delete previous asset %s for exercise %s: %s",
+                previous_key,
+                exercise.id,
+                exc,
+            )
+
+    # Mark settings as referenced so the linter doesn't flag the
+    # import — `get_settings()` is also kept available for future
+    # per-asset configuration.
+    _ = settings
+    return ExercisePublic.model_validate(exercise)
+
+
+@router.delete(
+    "/exercises/{exercise_id}/assets/{asset_type}",
+    response_model=ExercisePublic,
+    summary="Remove an audio or image asset from an exercise",
+)
+async def delete_exercise_asset(
+    user: CurrentUser,
+    session: DBSession,
+    exercise_id: Annotated[str, Path(min_length=1, max_length=36)],
+    asset_type: Annotated[Literal["audio", "image"], Path()],
+) -> ExercisePublic:
+    if not _can_manage_exercises(user):
+        raise ForbiddenError(
+            "Only therapists and admins may modify exercise assets.",
+            code="EXERCISE_FORBIDDEN",
+        )
+
+    exercise = await _load_exercise_or_404(session, exercise_id)
+    slot = "audio_example_path" if asset_type == "audio" else "image_path"
+    previous_key = getattr(exercise, slot)
+    if previous_key is None:
+        return ExercisePublic.model_validate(exercise)
+
+    setattr(exercise, slot, None)
+    await session.commit()
+    await session.refresh(exercise)
+
+    try:
+        await get_audio_storage().delete_object(previous_key)
+    except Exception as exc:  # pragma: no cover - best effort
+        logger.warning(
+            "Could not delete asset %s for exercise %s: %s",
+            previous_key,
+            exercise.id,
+            exc,
+        )
+
+    return ExercisePublic.model_validate(exercise)
 
 
 # ---------------------------------------------------- Assignment endpoints

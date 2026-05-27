@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -20,11 +20,12 @@ export const Route = createFileRoute("/_authenticated/exercises/")({
 const CATEGORIES = [
   "",
   "articulation",
-  "phonology",
+  "vocabulary",
+  "phonemic_awareness",
   "fluency",
-  "voice",
-  "language",
-  "pragmatics",
+  "listening",
+  "grammar",
+  "breathing",
 ] as const;
 
 function difficultyVariant(
@@ -62,7 +63,13 @@ function ExercisesPage() {
       columnHelper.accessor("title", {
         header: () => t("exercises.title"),
         cell: (info) => (
-          <span className="font-medium">{info.getValue()}</span>
+          <Link
+            to="/exercises/$exerciseId"
+            params={{ exerciseId: info.row.original.id }}
+            className="font-medium text-brand-700 hover:text-brand-900 hover:underline dark:text-brand-200"
+          >
+            {info.getValue()}
+          </Link>
         ),
       }),
       columnHelper.accessor("category", {
