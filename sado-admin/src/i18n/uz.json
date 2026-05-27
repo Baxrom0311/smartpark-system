@@ -179,6 +179,33 @@
         "desc": "Bolaning so'nggi nutq baholash sessiyalari",
         "empty": "Hali baholash o'tkazilmagan",
         "viewAnalysis": "Tahlilni ochish →"
+      },
+      "assignments": {
+        "title": "Mashq topshiriqlari",
+        "desc": "Bola uchun belgilangan mashqlar va ularning bajarilishi",
+        "assignTitle": "Mashq biriktirish",
+        "assignDesc": "Katalogdan mashq tanlang va muddatini belgilang",
+        "searchLabel": "Mashqni qidirish",
+        "exerciseLabel": "Mashq",
+        "selectExercise": "— Mashqni tanlang —",
+        "dueDate": "Muddati",
+        "dueDateInvalid": "Sana noto'g'ri (YYYY-MM-DD)",
+        "notes": "Eslatma",
+        "submit": "Biriktirish",
+        "empty": "Topshiriqlar hali yo'q",
+        "markComplete": "Bajarildi",
+        "unknownExercise": "Mashq nomi noma'lum",
+        "due": "Muddati: {{date}}",
+        "completed": "Bajarildi: {{date}}",
+        "score": "Baho: {{value}}",
+        "confirmDelete": "Topshiriqni o'chirishni tasdiqlaysizmi?",
+        "statuses": {
+          "pending": "Kutilmoqda",
+          "in_progress": "Jarayonda",
+          "completed": "Bajarildi",
+          "skipped": "O'tkazib yuborildi",
+          "expired": "Muddati o'tdi"
+        }
       }
     }
   },

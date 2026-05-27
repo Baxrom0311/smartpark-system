@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { InfoRow } from "@/components/shared/info-row";
 import { PageHeader } from "@/components/shared/page-header";
+import { ChildAssignmentsCard } from "@/components/children/child-assignments-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -268,6 +269,8 @@ function ChildDetailPage() {
       {isPrivileged && (
         <ChildAssessmentsCard childId={child.id} />
       )}
+
+      <ChildAssignmentsCard childId={child.id} canManage={canEdit} />
 
       <Card>
         <CardHeader>

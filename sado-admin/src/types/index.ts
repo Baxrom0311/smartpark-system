@@ -126,6 +126,28 @@ export interface Assessment {
   completed_at: string | null;
 }
 
+export type AssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "skipped"
+  | "expired";
+
+export interface ExerciseAssignment {
+  id: string;
+  child_id: string;
+  exercise_id: string;
+  assigned_by_id: string | null;
+  status: AssignmentStatus;
+  due_date: string | null;
+  completed_at: string | null;
+  score: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  exercise: Exercise | null;
+}
+
 export interface RiskDistribution {
   green: number;
   yellow: number;
