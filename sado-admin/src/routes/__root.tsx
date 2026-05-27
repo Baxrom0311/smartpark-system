@@ -9,6 +9,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ErrorFallback } from "@/components/shared/error-fallback";
+import { NotFoundPage } from "@/components/shared/not-found";
 import { useAuthStore } from "@/stores/auth-store";
 
 export interface RouterContext {
@@ -17,6 +19,10 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
+  errorComponent: ({ error, reset }) => (
+    <ErrorFallback error={error} reset={reset} />
+  ),
+  notFoundComponent: NotFoundPage,
 });
 
 function RootComponent() {

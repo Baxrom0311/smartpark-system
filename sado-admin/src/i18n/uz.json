@@ -71,7 +71,12 @@
     "forbidden": "Bu amalni bajarish huquqingiz yo'q",
     "notFound": "Topilmadi",
     "validation": "Kiritilgan ma'lumotlarda xatolik bor",
-    "server": "Serverda xatolik yuz berdi"
+    "server": "Serverda xatolik yuz berdi",
+    "boundaryTitle": "Kutilmagan xatolik yuz berdi",
+    "boundaryDesc": "Sahifani yuklashda xatolik. Qayta urinib ko'ring yoki bosh sahifaga qayting.",
+    "notFoundTitle": "Sahifa topilmadi",
+    "notFoundDesc": "So'ralgan sahifa mavjud emas yoki ko'chirilgan.",
+    "backHome": "Bosh sahifaga qaytish"
   },
   "users": {
     "description": "Tizim foydalanuvchilarini boshqarish",
