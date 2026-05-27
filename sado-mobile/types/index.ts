@@ -231,3 +231,27 @@ export interface AssessmentAnalysis {
   completed_at: string | null;
   results: AnalysisRecord[];
 }
+
+/* ---------------------------------------------------------- Kindergartens */
+
+export interface Kindergarten {
+  id: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  teacher_count: number;
+  child_count: number;
+  region_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KindergartenStats {
+  kindergarten_id: string;
+  name: string;
+  total_children: number;
+  risk_green: number;
+  risk_yellow: number;
+  risk_red: number;
+  assessed_children: number;
+}

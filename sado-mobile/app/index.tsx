@@ -1,7 +1,7 @@
 /**
  * App entry — runs the auth bootstrap on mount and routes the user
- * either into the authenticated parent stack or the onboarding flow
- * based on the persisted session.
+ * either into the authenticated parent/teacher stack or the onboarding
+ * flow based on the persisted session and the user's role.
  *
  * While the bootstrap is in flight (`idle` / `loading`) we render a
  * splash-style loading view so the app never flashes the wrong stack.
@@ -15,6 +15,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 export default function IndexRoute(): React.ReactElement {
   const status = useAuthStore((state) => state.status);
+  const user = useAuthStore((state) => state.user);
   const bootstrap = useAuthStore((state) => state.bootstrap);
 
   useEffect(() => {
@@ -32,7 +33,10 @@ export default function IndexRoute(): React.ReactElement {
     );
   }
 
-  if (status === "authenticated") {
+  if (status === "authenticated" && user !== null) {
+    if (user.role === "teacher" || user.role === "admin") {
+      return <Redirect href="/(teacher)" />;
+    }
     return <Redirect href="/(parent)" />;
   }
 

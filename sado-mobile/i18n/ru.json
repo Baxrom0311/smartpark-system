@@ -199,5 +199,26 @@
     "roleTeacher": "Воспитатель",
     "roleTherapist": "Логопед",
     "roleAdmin": "Администратор"
+  },
+  "teacher": {
+    "title": "Группы",
+    "subtitle": "Здравствуйте, {{name}}. Список садиков и групп.",
+    "summary": "Общая статистика",
+    "groupsLabel": "Группы",
+    "childrenLabel": "Дети",
+    "teachersLabel": "Воспитатели",
+    "empty": "Нет доступных садиков",
+    "emptySubtitle": "Группы появятся после того, как администратор закрепит вас за регионом",
+    "childrenCount": "{{count}} детей",
+    "teachersCount": "{{count}} воспитателей",
+    "screen": "Скрининг",
+    "riskDistribution": "Распределение риска",
+    "riskGreenCount": "Зелёный: {{count}}",
+    "riskYellowCount": "Жёлтый: {{count}}",
+    "riskRedCount": "Красный: {{count}}",
+    "assessedCount": "{{assessed}} из {{total}} оценено",
+    "childrenInGroup": "Дети в группе ({{count}})",
+    "noChildrenInGroup": "В этой группе пока нет детей",
+    "notFound": "Группа не найдена"
   }
 }

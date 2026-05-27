@@ -199,5 +199,26 @@
     "roleTeacher": "Tarbiyachi",
     "roleTherapist": "Logoped",
     "roleAdmin": "Administrator"
+  },
+  "teacher": {
+    "title": "Guruhlar",
+    "subtitle": "Salom, {{name}}. Bog'chalar va guruhlar ro'yxati.",
+    "summary": "Umumiy ko'rsatkich",
+    "groupsLabel": "Guruhlar",
+    "childrenLabel": "Bolalar",
+    "teachersLabel": "Tarbiyachilar",
+    "empty": "Sizga ko'rinadigan bog'chalar yo'q",
+    "emptySubtitle": "Administrator sizni mintaqaga biriktirgach guruhlar paydo bo'ladi",
+    "childrenCount": "{{count}} bola",
+    "teachersCount": "{{count}} tarbiyachi",
+    "screen": "Skrining",
+    "riskDistribution": "Xavf darajasi taqsimoti",
+    "riskGreenCount": "Yashil: {{count}}",
+    "riskYellowCount": "Sariq: {{count}}",
+    "riskRedCount": "Qizil: {{count}}",
+    "assessedCount": "{{assessed}} / {{total}} baholangan",
+    "childrenInGroup": "Guruhdagi bolalar ({{count}})",
+    "noChildrenInGroup": "Bu guruhda hali bolalar yo'q",
+    "notFound": "Guruh topilmadi"
   }
 }
