@@ -129,6 +129,20 @@
       "male": "O'g'il bola",
       "female": "Qiz bola",
       "unknown": "Ko'rsatilmagan"
+    },
+    "detail": {
+      "subtitle": "Bola profili va ma'lumotlari",
+      "summary": "Bola haqida ma'lumot",
+      "summaryDesc": "Bola profili bo'yicha asosiy ma'lumotlar",
+      "editTitle": "Profilni tahrirlash",
+      "editDesc": "Bolaning ma'lumotlarini yangilang",
+      "editForbidden": "Sizda bu bolaning ma'lumotlarini o'zgartirish huquqi yo'q",
+      "notFound": "Bola topilmadi",
+      "parentId": "Ota-ona ID",
+      "notes": "Eslatmalar",
+      "noKindergarten": "— Bog'cha tanlanmagan —",
+      "confirmDelete": "Bolani o'chirishni tasdiqlang",
+      "confirmDeleteDesc": "{{name}} ma'lumotlari butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi."
     }
   },
   "kindergartens": {
@@ -140,7 +154,23 @@
     "children": "Bolalar",
     "region": "Hudud",
     "searchPlaceholder": "Nom bo'yicha qidirish...",
-    "empty": "Bog'chalar topilmadi"
+    "empty": "Bog'chalar topilmadi",
+    "detail": {
+      "subtitle": "Bog'cha profili va statistikasi",
+      "summary": "Asosiy ma'lumot",
+      "summaryDesc": "Bog'chaning kontakt va manzil ma'lumotlari",
+      "statsTitle": "Statistika",
+      "statsDesc": "Bog'chadagi bolalar va xavf darajalari",
+      "totalChildren": "Jami bolalar",
+      "assessed": "Baholangan",
+      "editTitle": "Bog'chani tahrirlash",
+      "editDesc": "Bog'cha haqidagi ma'lumotlarni yangilang",
+      "editForbidden": "Faqat administrator bog'chani o'zgartira oladi",
+      "notFound": "Bog'cha topilmadi",
+      "noRegion": "— Hudud tanlanmagan —",
+      "confirmDelete": "Bog'chani o'chirishni tasdiqlang",
+      "confirmDeleteDesc": "{{name}} bog'chasi tizimdan o'chiriladi. Bu amalni qaytarib bo'lmaydi."
+    }
   },
   "exercises": {
     "description": "Mashqlar kataloglari va sozlamalari",

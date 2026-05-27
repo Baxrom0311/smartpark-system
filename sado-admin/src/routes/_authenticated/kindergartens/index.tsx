@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -32,7 +32,13 @@ function KindergartensPage() {
       columnHelper.accessor("name", {
         header: () => t("kindergartens.name"),
         cell: (info) => (
-          <span className="font-medium">{info.getValue()}</span>
+          <Link
+            to="/kindergartens/$kindergartenId"
+            params={{ kindergartenId: info.row.original.id }}
+            className="font-medium text-brand-700 hover:text-brand-900 hover:underline dark:text-brand-200"
+          >
+            {info.getValue()}
+          </Link>
         ),
       }),
       columnHelper.accessor("address", {
