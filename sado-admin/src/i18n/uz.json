@@ -24,6 +24,7 @@
     "children": "Bolalar",
     "kindergartens": "Bolalar bog'chalari",
     "exercises": "Mashqlar",
+    "notifications": "Bildirishnomalar",
     "statistics": "Statistika",
     "settings": "Sozlamalar"
   },
@@ -384,6 +385,33 @@
         "weak": "Zaif",
         "ok": "Yaxshi"
       }
+    }
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "description": "Tizimdan kelgan oxirgi xabarlar va eslatmalar",
+    "empty": "Bildirishnomalar yo'q",
+    "emptyHint": "Yangi xabar paydo bo'lganda bu yerda ko'rinadi",
+    "markRead": "O'qilgan deb belgilash",
+    "markAllRead": "Hammasini o'qildi",
+    "archive": "Arxivlash",
+    "bellTitle": "Bildirishnomalar",
+    "bellAriaLabel_zero": "Bildirishnomalar — yangi xabar yo'q",
+    "bellAriaLabel_one": "Bildirishnomalar — {{count}} ta yangi",
+    "bellAriaLabel_other": "Bildirishnomalar — {{count}} ta yangi",
+    "unreadCount_zero": "Yangi bildirishnoma yo'q",
+    "unreadCount_one": "{{count}} ta o'qilmagan bildirishnoma",
+    "unreadCount_other": "{{count}} ta o'qilmagan bildirishnoma",
+    "filters": {
+      "all": "Hammasi",
+      "unread": "O'qilmaganlar"
+    },
+    "types": {
+      "system": "Tizim",
+      "assessment_ready": "Baholash tayyor",
+      "exercise_assigned": "Mashq biriktirildi",
+      "exercise_due": "Mashq muddati",
+      "referral": "Yo'naltirish"
     }
   }
 }

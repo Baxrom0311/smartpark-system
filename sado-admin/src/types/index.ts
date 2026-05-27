@@ -277,3 +277,27 @@ export interface AssessmentDetailedAnalysisResponse {
   completed_at: string | null;
   results: AnalysisDetailed[];
 }
+
+export type NotificationType =
+  | "system"
+  | "assessment_ready"
+  | "exercise_assigned"
+  | "exercise_due"
+  | "referral";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType | string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  read_at: string | null;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UnreadCountResponse {
+  unread: number;
+}

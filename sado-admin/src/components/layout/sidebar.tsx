@@ -3,6 +3,7 @@ import {
   Activity,
   Baby,
   BarChart3,
+  Bell,
   Building2,
   Dumbbell,
   LayoutDashboard,
@@ -13,7 +14,9 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { useUnreadNotificationCount } from "@/hooks/queries/use-notifications";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
 
 interface NavItem {
@@ -32,6 +35,7 @@ const NAV_ITEMS: ReadonlyArray<NavItem> = [
     icon: Building2,
   },
   { to: "/exercises", labelKey: "nav.exercises", icon: Dumbbell },
+  { to: "/notifications", labelKey: "nav.notifications", icon: Bell },
   { to: "/statistics", labelKey: "nav.statistics", icon: BarChart3 },
   { to: "/settings", labelKey: "nav.settings", icon: Settings },
 ];
@@ -40,6 +44,11 @@ export function Sidebar() {
   const { t } = useTranslation();
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUiStore((s) => s.setSidebarOpen);
+  const status = useAuthStore((s) => s.status);
+  const { data: unreadData } = useUnreadNotificationCount(
+    status === "authenticated",
+  );
+  const unread = unreadData?.unread ?? 0;
 
   return (
     <>
@@ -84,6 +93,7 @@ export function Sidebar() {
           <ul className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
+              const isNotifications = item.to === "/notifications";
               return (
                 <li key={item.to}>
                   <Link
@@ -96,7 +106,15 @@ export function Sidebar() {
                     activeOptions={{ exact: item.to === "/" }}
                   >
                     <Icon className="h-4 w-4" aria-hidden />
-                    {t(item.labelKey)}
+                    <span className="flex-1">{t(item.labelKey)}</span>
+                    {isNotifications && unread > 0 && (
+                      <span
+                        className="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-risk-red px-1.5 text-[10px] font-semibold text-white"
+                        data-testid="sidebar-notif-count"
+                      >
+                        {unread > 99 ? "99+" : unread}
+                      </span>
+                    )}
                   </Link>
                 </li>
               );

@@ -24,6 +24,7 @@
     "children": "Дети",
     "kindergartens": "Детские сады",
     "exercises": "Упражнения",
+    "notifications": "Уведомления",
     "statistics": "Статистика",
     "settings": "Настройки"
   },
@@ -388,6 +389,37 @@
         "weak": "Слабо",
         "ok": "Хорошо"
       }
+    }
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "description": "Последние события и напоминания системы",
+    "empty": "Уведомлений пока нет",
+    "emptyHint": "Когда появятся новые события — они отобразятся здесь",
+    "markRead": "Отметить прочитанным",
+    "markAllRead": "Прочитать все",
+    "archive": "Архивировать",
+    "bellTitle": "Уведомления",
+    "bellAriaLabel_zero": "Уведомления — новых нет",
+    "bellAriaLabel_one": "Уведомления — {{count}} новое",
+    "bellAriaLabel_few": "Уведомления — {{count}} новых",
+    "bellAriaLabel_many": "Уведомления — {{count}} новых",
+    "bellAriaLabel_other": "Уведомления — {{count}} новых",
+    "unreadCount_zero": "Нет непрочитанных уведомлений",
+    "unreadCount_one": "{{count}} непрочитанное уведомление",
+    "unreadCount_few": "{{count}} непрочитанных уведомления",
+    "unreadCount_many": "{{count}} непрочитанных уведомлений",
+    "unreadCount_other": "{{count}} непрочитанных уведомлений",
+    "filters": {
+      "all": "Все",
+      "unread": "Непрочитанные"
+    },
+    "types": {
+      "system": "Система",
+      "assessment_ready": "Результат обследования",
+      "exercise_assigned": "Назначено упражнение",
+      "exercise_due": "Срок упражнения",
+      "referral": "Направление"
     }
   }
 }

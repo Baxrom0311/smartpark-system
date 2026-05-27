@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { NotificationsBell } from "@/components/layout/notifications-bell";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -57,6 +58,7 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-2">
+        <NotificationsBell />
         <Button
           variant="ghost"
           size="sm"
