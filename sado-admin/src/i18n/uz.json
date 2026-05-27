@@ -1,0 +1,70 @@
+{
+  "app": {
+    "name": "SADO Admin",
+    "description": "Bolalar nutqi terapiyasi platformasi"
+  },
+  "auth": {
+    "login": "Kirish",
+    "logout": "Chiqish",
+    "email": "Elektron pochta",
+    "phone": "Telefon raqami",
+    "password": "Parol",
+    "loginButton": "Tizimga kirish",
+    "loggingIn": "Kirish...",
+    "welcome": "Tizimga xush kelibsiz",
+    "subtitle": "Hisobingizga kirish uchun ma'lumotlarni kiriting",
+    "useEmail": "Elektron pochta orqali",
+    "usePhone": "Telefon orqali",
+    "errorInvalid": "Noto'g'ri elektron pochta yoki parol",
+    "errorGeneric": "Tizimga kirib bo'lmadi"
+  },
+  "nav": {
+    "dashboard": "Boshqaruv paneli",
+    "users": "Foydalanuvchilar",
+    "children": "Bolalar",
+    "kindergartens": "Bolalar bog'chalari",
+    "exercises": "Mashqlar",
+    "statistics": "Statistika",
+    "settings": "Sozlamalar"
+  },
+  "dashboard": {
+    "title": "Umumiy ko'rinish",
+    "totalChildren": "Jami bolalar",
+    "assessmentsToday": "Bugungi baholashlar",
+    "redRiskPct": "Yuqori xavf %",
+    "activeTherapists": "Faol terapevtlar",
+    "riskDistribution": "Xavf taqsimoti",
+    "weeklyAssessments": "Haftalik baholashlar",
+    "noData": "Ma'lumot yo'q"
+  },
+  "common": {
+    "loading": "Yuklanmoqda...",
+    "error": "Xatolik yuz berdi",
+    "retry": "Qayta urinish",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "delete": "O'chirish",
+    "edit": "Tahrirlash",
+    "create": "Yaratish",
+    "search": "Qidirish",
+    "empty": "Hech narsa topilmadi"
+  },
+  "theme": {
+    "light": "Yorug'",
+    "dark": "Qorong'i",
+    "system": "Tizim"
+  },
+  "risk": {
+    "green": "Yashil",
+    "yellow": "Sariq",
+    "red": "Qizil"
+  },
+  "errors": {
+    "network": "Tarmoqqa ulanib bo'lmadi",
+    "unauthorized": "Sessiya tugadi. Iltimos, qayta kiring.",
+    "forbidden": "Bu amalni bajarish huquqingiz yo'q",
+    "notFound": "Topilmadi",
+    "validation": "Kiritilgan ma'lumotlarda xatolik bor",
+    "server": "Serverda xatolik yuz berdi"
+  }
+}

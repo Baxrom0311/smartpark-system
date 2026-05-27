@@ -1,0 +1,70 @@
+{
+  "app": {
+    "name": "SADO Admin",
+    "description": "Платформа речевой терапии для детей"
+  },
+  "auth": {
+    "login": "Войти",
+    "logout": "Выйти",
+    "email": "Электронная почта",
+    "phone": "Номер телефона",
+    "password": "Пароль",
+    "loginButton": "Войти в систему",
+    "loggingIn": "Вход...",
+    "welcome": "Добро пожаловать",
+    "subtitle": "Введите учётные данные для входа",
+    "useEmail": "Через эл. почту",
+    "usePhone": "Через телефон",
+    "errorInvalid": "Неверная почта или пароль",
+    "errorGeneric": "Не удалось войти"
+  },
+  "nav": {
+    "dashboard": "Панель управления",
+    "users": "Пользователи",
+    "children": "Дети",
+    "kindergartens": "Детские сады",
+    "exercises": "Упражнения",
+    "statistics": "Статистика",
+    "settings": "Настройки"
+  },
+  "dashboard": {
+    "title": "Обзор",
+    "totalChildren": "Всего детей",
+    "assessmentsToday": "Тестов сегодня",
+    "redRiskPct": "% высокого риска",
+    "activeTherapists": "Активные терапевты",
+    "riskDistribution": "Распределение рисков",
+    "weeklyAssessments": "Тесты за неделю",
+    "noData": "Нет данных"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "retry": "Повторить",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "empty": "Ничего не найдено"
+  },
+  "theme": {
+    "light": "Светлая",
+    "dark": "Тёмная",
+    "system": "Системная"
+  },
+  "risk": {
+    "green": "Зелёный",
+    "yellow": "Жёлтый",
+    "red": "Красный"
+  },
+  "errors": {
+    "network": "Нет связи с сервером",
+    "unauthorized": "Сессия истекла. Войдите снова.",
+    "forbidden": "Недостаточно прав для этого действия",
+    "notFound": "Не найдено",
+    "validation": "Ошибка в введённых данных",
+    "server": "Ошибка сервера"
+  }
+}
