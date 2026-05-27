@@ -25,6 +25,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RiskBadge } from "@/components/shared/risk-badge";
+import { useAssessments } from "@/hooks/queries/use-assessments";
 import {
   useChild,
   useDeleteChild,
@@ -33,7 +35,7 @@ import {
 import { useKindergartens } from "@/hooks/queries/use-kindergartens";
 import { ApiClientError } from "@/lib/api-client";
 import { useAuthStore } from "@/stores/auth-store";
-import type { UserLanguage } from "@/types";
+import type { Assessment, UserLanguage } from "@/types";
 
 export const Route = createFileRoute("/_authenticated/children/$childId")({
   component: ChildDetailPage,
@@ -151,6 +153,8 @@ function ChildDetailPage() {
   const child = query.data;
   if (!child) return null;
 
+  const isPrivileged = me?.role === "therapist" || me?.role === "admin";
+
   const submit = form.handleSubmit((values) => {
     if (!canEdit) return;
     updateMutation.mutate({
@@ -260,6 +264,10 @@ function ChildDetailPage() {
           </dl>
         </CardContent>
       </Card>
+
+      {isPrivileged && (
+        <ChildAssessmentsCard childId={child.id} />
+      )}
 
       <Card>
         <CardHeader>
@@ -515,5 +523,79 @@ function ChildDetailSkeleton() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+interface ChildAssessmentsCardProps {
+  childId: string;
+}
+
+/**
+ * Therapist-only card showing recent assessments for this child with a
+ * link to the detailed analysis page (`/analysis/{assessmentId}`).
+ *
+ * The endpoint is server-side guarded — this UI just hides the link
+ * for non-therapists/admins so they don't see a 403 on click.
+ */
+function ChildAssessmentsCard({ childId }: ChildAssessmentsCardProps) {
+  const { t } = useTranslation();
+  const query = useAssessments({ childId, limit: 5 });
+  const items: ReadonlyArray<Assessment> = query.data?.items ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("children.detail.assessments.title")}</CardTitle>
+        <CardDescription>
+          {t("children.detail.assessments.desc")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {query.isLoading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : query.isError ? (
+          <p className="text-sm text-risk-red">
+            {query.error instanceof Error
+              ? query.error.message
+              : t("errors.server")}
+          </p>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-brand-500">
+            {t("children.detail.assessments.empty")}
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-brand-100 dark:divide-brand-800">
+            {items.map((assessment) => (
+              <li
+                key={assessment.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  {assessment.risk_level ? (
+                    <RiskBadge level={assessment.risk_level} />
+                  ) : (
+                    <Badge variant="outline">{assessment.status}</Badge>
+                  )}
+                  <span className="text-sm text-brand-700 dark:text-brand-200">
+                    {formatDate(assessment.completed_at ?? assessment.created_at)}
+                  </span>
+                </div>
+                <Link
+                  to="/analysis/$assessmentId"
+                  params={{ assessmentId: assessment.id }}
+                  className="text-sm font-medium text-brand-700 hover:text-brand-900 hover:underline dark:text-brand-200"
+                >
+                  {t("children.detail.assessments.viewAnalysis")}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

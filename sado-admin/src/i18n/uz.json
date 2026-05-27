@@ -173,7 +173,13 @@
       "notes": "Eslatmalar",
       "noKindergarten": "— Bog'cha tanlanmagan —",
       "confirmDelete": "Bolani o'chirishni tasdiqlang",
-      "confirmDeleteDesc": "{{name}} ma'lumotlari butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi."
+      "confirmDeleteDesc": "{{name}} ma'lumotlari butunlay o'chiriladi. Bu amalni qaytarib bo'lmaydi.",
+      "assessments": {
+        "title": "So'nggi baholashlar",
+        "desc": "Bolaning so'nggi nutq baholash sessiyalari",
+        "empty": "Hali baholash o'tkazilmagan",
+        "viewAnalysis": "Tahlilni ochish →"
+      }
     }
   },
   "kindergartens": {
@@ -308,5 +314,49 @@
     "appearance": "Ko'rinish",
     "appearanceDesc": "Mavzu rejimini tanlang",
     "saved": "Saqlandi"
+  },
+  "analysis": {
+    "title": "Akustik tahlil",
+    "subtitle": "MFCC, balandlik, formant va fonema ko'rsatkichlari",
+    "notFound": "Tahlil topilmadi",
+    "empty": "Bu baholash uchun tahlil natijalari yo'q",
+    "overall": {
+      "title": "Umumiy natija",
+      "desc": "Barcha yozuvlar bo'yicha jamlangan xavf darajasi",
+      "risk": "Xavf darajasi",
+      "confidence": "Ishonch",
+      "status": "Holat",
+      "completedAt": "Tugatildi"
+    },
+    "recording": {
+      "title": "Yozuv #{{index}}",
+      "confidence": "Ishonch",
+      "transcript": "Transkript"
+    },
+    "charts": {
+      "noData": "Bu yozuv uchun ma'lumot yo'q",
+      "pitch": {
+        "title": "Ovoz balandligi (F0)",
+        "desc": "Vaqt bo'yicha asosiy chastota Hz da",
+        "ariaLabel": "Ovoz balandligi grafigi"
+      },
+      "formants": {
+        "title": "Formant traektoriyalari",
+        "desc": "F1, F2 va F3 chastota tendensiyalari",
+        "ariaLabel": "Formant grafigi"
+      },
+      "mfcc": {
+        "title": "MFCC koeffitsientlari",
+        "desc": "O'rtacha qiymat va og'ish (xato chizig'i)",
+        "ariaLabel": "MFCC koeffitsientlari grafigi"
+      },
+      "phonemes": {
+        "title": "Fonema bahosi",
+        "desc": "Har bir tovush uchun aniqlik foizi",
+        "ariaLabel": "Fonema bahosi grafigi",
+        "weak": "Zaif",
+        "ok": "Yaxshi"
+      }
+    }
   }
 }

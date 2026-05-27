@@ -185,3 +185,73 @@ export interface RegionalStats {
   kindergartens: KindergartenStatRow[];
   daily_trend: DailyAssessmentPoint[];
 }
+
+
+/** Acoustic + linguistic features extracted from one recording. */
+export interface MfccFeatures {
+  n_mfcc: number;
+  n_frames: number;
+  matrix?: number[][];
+  mean: number[];
+  std: number[];
+  min: number;
+  max: number;
+}
+
+export interface PitchData {
+  f0_hz: number[];
+  f0_mean: number;
+  f0_min: number;
+  f0_max: number;
+  voiced_ratio: number;
+}
+
+export interface FormantData {
+  tracks: { f1: number[]; f2: number[]; f3: number[] };
+  f1_mean: number;
+  f2_mean: number;
+  f3_mean: number;
+}
+
+export interface PhonemeScores {
+  scores: Record<string, number>;
+  weakest: { phoneme: string; score: number }[];
+  strongest: { phoneme: string; score: number }[];
+}
+
+/** Risk-only analysis row for the parent-safe view. */
+export interface AnalysisPublic {
+  recording_id: string;
+  risk_level: RiskLevel;
+  confidence: number;
+  transcript: string | null;
+  feature_summary: Record<string, unknown> | null;
+  model_name: string;
+  model_version: string;
+  created_at: string;
+}
+
+export interface AnalysisDetailed extends AnalysisPublic {
+  mfcc_features: MfccFeatures | null;
+  pitch_data: PitchData | null;
+  formant_data: FormantData | null;
+  phoneme_scores: PhonemeScores | null;
+}
+
+export interface AssessmentAnalysisResponse {
+  assessment_id: string;
+  overall_risk: RiskLevel | null;
+  overall_confidence: number | null;
+  status: AssessmentStatus;
+  completed_at: string | null;
+  results: AnalysisPublic[];
+}
+
+export interface AssessmentDetailedAnalysisResponse {
+  assessment_id: string;
+  overall_risk: RiskLevel | null;
+  overall_confidence: number | null;
+  status: AssessmentStatus;
+  completed_at: string | null;
+  results: AnalysisDetailed[];
+}
