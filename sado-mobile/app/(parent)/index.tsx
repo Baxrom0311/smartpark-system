@@ -1,29 +1,59 @@
 /**
- * Parent home screen — entry point after a successful login. Shows a
- * greeting, primary CTAs (start assessment, daily exercise) and a
- * placeholder for the children list which will be populated by the
- * children query in a later milestone.
+ * Parent home screen — entry point after a successful login.
  *
- * This screen intentionally avoids any direct API calls — it consumes
- * the auth store for the user and delegates server data to query
- * hooks that will be wired up in subsequent builds.
+ * Shows a greeting, the registered children, and primary CTAs:
+ *   - Add child  → /(parent)/children/new
+ *   - Start assessment → /(parent)/assessment
+ *
+ * Children are loaded from the backend via TanStack Query so the list
+ * stays in sync after the parent registers a new child.
  */
 
-import { ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { listAllChildren } from "@/services/children";
 import { useAuthStore } from "@/stores/auth-store";
+import type { Child } from "@/types";
+
+function ChildPill({ child }: { child: Child }): React.ReactElement {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={child.name}
+      onPress={() => router.push("/(parent)/children")}
+      className="rounded-2xl border border-neutral-200 bg-white px-4 py-3"
+    >
+      <Text className="text-base font-semibold text-neutral-900">
+        {child.name}
+      </Text>
+      <Text className="text-xs text-neutral-500">
+        {t("child.ageYears", { count: child.age_years })}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function ParentHomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
+  const childrenQuery = useQuery({
+    queryKey: ["children", "all"],
+    queryFn: () => listAllChildren(),
+  });
+
   const greetingName = user?.full_name ?? "";
+  const children = childrenQuery.data ?? [];
+  const hasChildren = children.length > 0;
 
   return (
     <SafeAreaView className="flex-1 bg-neutral-50" edges={["top"]}>
@@ -62,17 +92,60 @@ export default function ParentHomeScreen(): React.ReactElement {
                 label={t("home.startAssessment")}
                 size="md"
                 accessibilityLabel={t("home.startAssessment")}
+                onPress={() => router.push("/(parent)/assessment")}
               />
             </View>
           </Card>
 
           <Card variant="outline" padding="lg">
-            <Text className="text-lg font-semibold text-neutral-900">
-              {t("home.todaysExercise")}
-            </Text>
-            <Text className="mt-1 text-sm text-neutral-600">
-              {t("common.loading")}
-            </Text>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-neutral-900">
+                {t("home.yourChildren")}
+              </Text>
+              <Button
+                label={t("home.addChild")}
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                onPress={() => router.push("/(parent)/children/new")}
+              />
+            </View>
+
+            <View className="mt-3">
+              {childrenQuery.isLoading ? (
+                <ActivityIndicator size="small" color="#2563eb" />
+              ) : childrenQuery.isError ? (
+                <Text className="text-sm text-risk-red">
+                  {t("common.error")}
+                </Text>
+              ) : !hasChildren ? (
+                <View className="gap-2">
+                  <Text className="text-sm text-neutral-700">
+                    {t("home.noChildren")}
+                  </Text>
+                  <Text className="text-xs text-neutral-500">
+                    {t("home.noChildrenSubtitle")}
+                  </Text>
+                </View>
+              ) : (
+                <View className="gap-2">
+                  {children.slice(0, 4).map((child) => (
+                    <ChildPill key={child.id} child={child} />
+                  ))}
+                  {children.length > 4 ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => router.push("/(parent)/children")}
+                      className="self-start rounded-full px-3 py-1"
+                    >
+                      <Text className="text-xs font-medium text-primary-700">
+                        +{children.length - 4}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              )}
+            </View>
           </Card>
 
           <Card variant="outline" padding="lg">

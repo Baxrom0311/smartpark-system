@@ -14,7 +14,10 @@
     "retry": "Qayta urinish",
     "logout": "Chiqish",
     "signIn": "Kirish",
-    "signUp": "Ro'yxatdan o'tish"
+    "signUp": "Ro'yxatdan o'tish",
+    "ok": "OK",
+    "tryAgain": "Qayta urining",
+    "close": "Yopish"
   },
   "onboarding": {
     "welcomeTitle": "SADO ga xush kelibsiz",
@@ -55,11 +58,66 @@
     "todaysExercise": "Bugungi mashq",
     "progress": "Bola taraqqiyoti",
     "noChildren": "Hali hech qanday bola qo'shilmagan",
-    "noChildrenSubtitle": "Boshlash uchun bolangizni qo'shing"
+    "noChildrenSubtitle": "Boshlash uchun bolangizni qo'shing",
+    "yourChildren": "Sizning bolalaringiz"
   },
   "risk": {
     "green": "Yashil — me'yorda",
     "yellow": "Sariq — kuzatuv",
-    "red": "Qizil — mutaxassisga"
+    "red": "Qizil — mutaxassisga",
+    "pending": "Tayyorlanmoqda"
+  },
+  "child": {
+    "title": "Bolalar",
+    "subtitle": "Ro'yxatga olingan bolalar",
+    "addTitle": "Yangi bola qo'shish",
+    "addSubtitle": "Bolangiz haqida ma'lumot kiriting",
+    "fieldName": "Ism",
+    "fieldBirthDate": "Tug'ilgan kun (YYYY-MM-DD)",
+    "fieldGender": "Jinsi",
+    "fieldLanguage": "Tili",
+    "genderMale": "O'g'il bola",
+    "genderFemale": "Qiz bola",
+    "genderUnknown": "Ko'rsatilmagan",
+    "ageYears": "{{count}} yosh",
+    "save": "Bolani saqlash",
+    "errorName": "Ismni kiriting",
+    "errorBirth": "Tug'ilgan kun YYYY-MM-DD formatida bo'lsin",
+    "errorBirthFuture": "Tug'ilgan kun kelajakda bo'lishi mumkin emas",
+    "empty": "Hali ro'yxatga olingan bolalar yo'q"
+  },
+  "assessment": {
+    "title": "Nutq baholash",
+    "pickChild": "Bolani tanlang",
+    "noChildren": "Avval bola qo'shing",
+    "introTitle": "Tayyormisiz?",
+    "introBody": "Mikrofonga ruxsat bering, biz bolangiz nutqini tinglaymiz va natijani ko'rsatamiz.",
+    "startGame": "O'yinni boshlash",
+    "tapToRecord": "Yozib olish uchun bosing",
+    "recording": "Yozib olinmoqda…",
+    "stop": "To'xtatish",
+    "playback": "Tinglab ko'rish",
+    "submit": "Yuborish",
+    "submitting": "Yuborilmoqda…",
+    "submitFailed": "Yuborilmadi. Yana urining.",
+    "permissionDenied": "Mikrofonga ruxsat berilmagan",
+    "permissionDeniedBody": "Sozlamalardan ruxsat bering va qaytadan urining.",
+    "prompt": "Mana bu so'zni takrorlang:",
+    "step": "Qadam {{current}} / {{total}}",
+    "complete": "Yakunlash",
+    "tooShort": "Kamida 1 soniya yozib oling",
+    "tooLong": "Maksimal {{seconds}} soniya"
+  },
+  "results": {
+    "title": "Natijalar",
+    "loading": "Natijalar tayyorlanmoqda…",
+    "overall": "Umumiy daraja",
+    "confidence": "Ishonch: {{percent}}%",
+    "explanationGreen": "Bolangiz nutqi yoshiga mos. Mashqlarni davom ettiring.",
+    "explanationYellow": "Ba'zi belgilar kuzatildi. Mashqlarni 2 hafta davomida bajaring va qayta tekshiring.",
+    "explanationRed": "Mutaxassis maslahati tavsiya etiladi. Yaqin atrofingizdagi logopedga murojaat qiling.",
+    "tasks": "Bajarilgan vazifalar",
+    "noResults": "Natijalar mavjud emas",
+    "backHome": "Bosh sahifaga"
   }
 }

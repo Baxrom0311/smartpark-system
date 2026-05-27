@@ -9,13 +9,24 @@
 export type UserRole = "parent" | "teacher" | "therapist" | "admin";
 export type UserLanguage = "uz" | "ru" | "kk" | "en";
 export type RiskLevel = "green" | "yellow" | "red";
-export type ChildGender = "male" | "female" | "other";
+export type ChildGender = "male" | "female" | "unknown";
 export type AssessmentStatus =
   | "pending"
-  | "recording"
+  | "in_progress"
   | "processing"
   | "completed"
   | "failed";
+export type AssessmentType =
+  | "screening"
+  | "diagnostic"
+  | "follow_up"
+  | "practice";
+export type RecordingTaskType =
+  | "repeat_word"
+  | "repeat_sentence"
+  | "free_speech"
+  | "naming"
+  | "phoneme";
 
 export interface UserPublic {
   id: string;
@@ -59,11 +70,19 @@ export interface ApiErrorPayload {
   request_id?: string;
 }
 
-export interface CursorPage<T> {
+/**
+ * Cursor-paginated page returned by every list endpoint.
+ *
+ * Mirrors `app.core.pagination.Page[T]` on the backend — the API does
+ * NOT return a `total`. Use `has_more` + `next_cursor` to iterate.
+ */
+export interface Page<T> {
   items: T[];
   next_cursor: string | null;
-  total: number | null;
+  has_more: boolean;
 }
+
+/* ----------------------------------------------------------------- Children */
 
 export interface Child {
   id: string;
@@ -72,7 +91,9 @@ export interface Child {
   birth_date: string;
   gender: ChildGender;
   language: UserLanguage;
+  notes: string | null;
   kindergarten_id: string | null;
+  age_years: number;
   created_at: string;
   updated_at: string;
 }
@@ -83,7 +104,10 @@ export interface ChildCreateRequest {
   gender: ChildGender;
   language: UserLanguage;
   kindergarten_id?: string | null;
+  notes?: string | null;
 }
+
+/* -------------------------------------------------------------- Exercises */
 
 export interface Exercise {
   id: string;
@@ -110,21 +134,62 @@ export interface ExerciseAssignment {
   exercise: Exercise | null;
 }
 
+/* ------------------------------------------------------------- Assessments */
+
+export interface AudioRecording {
+  id: string;
+  assessment_id: string;
+  task_type: RecordingTaskType;
+  prompt: string | null;
+  storage_key: string;
+  content_type: string;
+  size_bytes: number;
+  duration_sec: number | null;
+  sample_rate: number | null;
+  processed: boolean;
+  processing_error: string | null;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Assessment {
   id: string;
   child_id: string;
-  type: string;
+  created_by_id: string | null;
+  type: AssessmentType;
   status: AssessmentStatus;
-  risk_level: RiskLevel | null;
-  confidence: number | null;
-  created_at: string;
+  overall_risk: RiskLevel | null;
+  overall_confidence: number | null;
+  summary: string | null;
+  started_at: string | null;
   completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  recordings: AudioRecording[];
 }
 
-export interface AssessmentResult {
-  assessment_id: string;
+export interface AssessmentCreateRequest {
+  child_id: string;
+  type?: AssessmentType;
+}
+
+export interface AnalysisRecord {
+  recording_id: string;
   risk_level: RiskLevel;
   confidence: number;
-  summary: string;
-  recommendations: string[];
+  transcript: string | null;
+  feature_summary: Record<string, unknown> | null;
+  model_name: string;
+  model_version: string;
+  created_at: string;
+}
+
+export interface AssessmentAnalysis {
+  assessment_id: string;
+  overall_risk: RiskLevel | null;
+  overall_confidence: number | null;
+  status: AssessmentStatus;
+  completed_at: string | null;
+  results: AnalysisRecord[];
 }
