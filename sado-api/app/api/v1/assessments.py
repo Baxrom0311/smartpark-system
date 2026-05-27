@@ -42,7 +42,6 @@ from app.core.pagination import (
     encode_cursor,
 )
 from app.models.assessment import (
-    AnalysisResult,
     Assessment,
     AssessmentStatus,
     AssessmentType,
@@ -120,12 +119,26 @@ def _can_create_assessment(user: User, child: Child) -> bool:
 
 
 async def _load_assessment_or_404(
-    session: DBSession, assessment_id: str, *, with_recordings: bool = True
+    session: DBSession,
+    assessment_id: str,
+    *,
+    with_recordings: bool = True,
+    with_analysis: bool = False,
 ) -> Assessment:
+    """Fetch one assessment with the relationships the caller needs.
+
+    ``with_analysis`` chains ``selectinload(AudioRecording.analysis)`` onto
+    the recordings load so analysis endpoints can serialise results
+    without issuing a second query per recording (no N+1).
+    """
+
     stmt = select(Assessment).where(Assessment.id == assessment_id)
     if with_recordings:
+        recordings_load = selectinload(Assessment.recordings)
+        if with_analysis:
+            recordings_load = recordings_load.selectinload(AudioRecording.analysis)
         stmt = stmt.options(
-            selectinload(Assessment.recordings),
+            recordings_load,
             selectinload(Assessment.child).selectinload(Child.kindergarten),
         )
     else:
@@ -499,23 +512,14 @@ async def get_analysis(
     session: DBSession,
     assessment_id: Annotated[str, Path(min_length=1, max_length=36)],
 ) -> AssessmentAnalysisResponse:
-    assessment = await _load_assessment_or_404(session, assessment_id)
+    assessment = await _load_assessment_or_404(
+        session, assessment_id, with_analysis=True
+    )
     _ensure_visible(user, assessment)
 
-    recording_ids = [r.id for r in assessment.recordings]
-    if not recording_ids:
-        return AssessmentAnalysisResponse(
-            assessment_id=assessment.id,
-            overall_risk=assessment.overall_risk,
-            overall_confidence=assessment.overall_confidence,
-            status=assessment.status,
-            completed_at=assessment.completed_at,
-            results=[],
-        )
-    rows = await session.execute(
-        select(AnalysisResult).where(AnalysisResult.recording_id.in_(recording_ids))
-    )
-    analyses = list(rows.scalars().all())
+    # Recordings + their analyses are already eager-loaded; iterate in
+    # memory rather than issuing a second SELECT against analysis_results.
+    analyses = [r.analysis for r in assessment.recordings if r.analysis is not None]
 
     return AssessmentAnalysisResponse(
         assessment_id=assessment.id,
@@ -554,13 +558,13 @@ async def get_analysis_detailed(
             "Detailed analysis is available to therapists and admins only.",
             code="DETAILED_FORBIDDEN",
         )
-    assessment = await _load_assessment_or_404(session, assessment_id)
-
-    recording_ids = [r.id for r in assessment.recordings]
-    rows = await session.execute(
-        select(AnalysisResult).where(AnalysisResult.recording_id.in_(recording_ids))
+    assessment = await _load_assessment_or_404(
+        session, assessment_id, with_analysis=True
     )
-    analyses = list(rows.scalars().all())
+
+    # Eager-loaded relation removes the need for a separate
+    # ``select(AnalysisResult)`` round-trip per recording.
+    analyses = [r.analysis for r in assessment.recordings if r.analysis is not None]
 
     return AssessmentDetailedAnalysisResponse(
         assessment_id=assessment.id,

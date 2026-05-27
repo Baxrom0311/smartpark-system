@@ -338,3 +338,167 @@ async def test_recording_processing_is_deterministic(client) -> None:
 
     assert risk_levels[0] == risk_levels[1]
     assert risk_levels[0] in {"green", "yellow", "red"}
+
+
+
+# --------------------------------------------------------------------------
+# N+1 regression: /analysis/:id/detailed must not issue one query per
+# recording for the analysis_results table. We attach a SQLAlchemy event
+# listener that records every SELECT against analysis_results during the
+# request, then assert there is exactly one such query regardless of the
+# number of recordings (selectinload uses a single IN-clause SELECT).
+# --------------------------------------------------------------------------
+
+
+async def _seed_assessment_with_recordings(
+    client, parent_headers: dict, child_id: str, n_recordings: int
+) -> str:
+    create = await client.post(
+        "/api/v1/assessments",
+        json={"child_id": child_id, "type": "screening"},
+        headers=parent_headers,
+    )
+    assert create.status_code == 201, create.text
+    assessment_id = create.json()["id"]
+
+    for idx in range(n_recordings):
+        files = {
+            "audio": (
+                f"clip{idx}.wav",
+                io.BytesIO(_audio_bytes(idx + 1)),
+                "audio/wav",
+            ),
+        }
+        upload = await client.post(
+            f"/api/v1/assessments/{assessment_id}/recordings",
+            files=files,
+            data={"task_type": "repeat_word", "prompt": f"prompt-{idx}"},
+            headers=parent_headers,
+        )
+        assert upload.status_code == 201, upload.text
+
+    return assessment_id
+
+
+def _attach_query_recorder(table_name: str) -> tuple[list[str], callable]:
+    """Subscribe to ``before_cursor_execute`` on the active async engine.
+
+    Captures every SELECT statement that mentions ``table_name``. The
+    cleanup callable removes the listener so adjacent tests aren't
+    polluted with stale subscribers.
+    """
+
+    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import AsyncEngine
+
+    from app.database import get_engine
+
+    captured: list[str] = []
+
+    def _listener(_conn, _cursor, statement, _params, _context, _executemany):
+        normalized = " ".join(statement.lower().split())
+        if normalized.startswith("select") and table_name in normalized:
+            captured.append(statement)
+
+    async_engine: AsyncEngine = get_engine()
+    event.listen(async_engine.sync_engine, "before_cursor_execute", _listener)
+
+    def _cleanup() -> None:
+        try:
+            event.remove(
+                async_engine.sync_engine, "before_cursor_execute", _listener
+            )
+        except Exception:
+            pass
+
+    return captured, _cleanup
+
+
+async def test_detailed_analysis_no_n_plus_one_on_analysis_results(
+    client,
+) -> None:
+    """``/analysis/:id/detailed`` must issue exactly one analysis_results SELECT.
+
+    SQLAlchemy's ``selectinload`` collapses related-row loads into a
+    single IN-clause query. If a future refactor reverts to per-recording
+    fetches the count below will jump to N and this test fails.
+    """
+
+    _, parent = await _register_login(client, "n_plus_one@sado.uz")
+    child_id = await _create_child(client, parent, name="QueryCounter")
+    admin = await _admin_headers(client)
+
+    # ---- Baseline: 3 recordings ----
+    assessment_id_3 = await _seed_assessment_with_recordings(
+        client, parent, child_id, n_recordings=3
+    )
+    captured_3, cleanup_3 = _attach_query_recorder("analysis_results")
+    try:
+        response = await client.get(
+            f"/api/v1/analysis/{assessment_id_3}/detailed", headers=admin
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert len(body["results"]) == 3
+    finally:
+        cleanup_3()
+
+    # ---- Stress: 6 recordings ----
+    assessment_id_6 = await _seed_assessment_with_recordings(
+        client, parent, child_id, n_recordings=6
+    )
+    captured_6, cleanup_6 = _attach_query_recorder("analysis_results")
+    try:
+        response = await client.get(
+            f"/api/v1/analysis/{assessment_id_6}/detailed", headers=admin
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert len(body["results"]) == 6
+    finally:
+        cleanup_6()
+
+    # The selectinload chain issues ONE select against analysis_results
+    # regardless of N. We intentionally pin to 1 so a regression to
+    # per-recording fetches (which would yield N) is caught immediately.
+    assert (
+        len(captured_3) == 1
+    ), f"baseline: expected 1 analysis_results SELECT, got {len(captured_3)}\n" + "\n".join(
+        captured_3
+    )
+    assert (
+        len(captured_6) == 1
+    ), f"stress: expected 1 analysis_results SELECT, got {len(captured_6)}\n" + "\n".join(
+        captured_6
+    )
+    # And the count must NOT scale with N — same shape for 3 vs 6.
+    assert len(captured_6) == len(captured_3)
+
+
+async def test_parent_analysis_no_n_plus_one_on_analysis_results(
+    client,
+) -> None:
+    """The parent-safe ``/analysis/:id`` view shares the same eager-load path."""
+
+    _, parent = await _register_login(client, "parent_analysis@sado.uz")
+    child_id = await _create_child(client, parent, name="ParentView")
+
+    assessment_id = await _seed_assessment_with_recordings(
+        client, parent, child_id, n_recordings=4
+    )
+    captured, cleanup = _attach_query_recorder("analysis_results")
+    try:
+        response = await client.get(
+            f"/api/v1/analysis/{assessment_id}", headers=parent
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert len(body["results"]) == 4
+    finally:
+        cleanup()
+
+    assert (
+        len(captured) == 1
+    ), f"expected 1 analysis_results SELECT, got {len(captured)}\n" + "\n".join(
+        captured
+    )
