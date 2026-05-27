@@ -53,7 +53,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 # Coverage gate is enforced here so every invocation (local + CI + orchestrator)
 # uses the same threshold without needing extra flags.
-addopts = "-ra --cov=app --cov-report=term-missing --cov-fail-under=80"
+addopts = "-q --cov=app --cov-report=term-missing --cov-fail-under=80"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
