@@ -6,16 +6,32 @@ base, which is what Alembic and ``Base.metadata.create_all()`` depend on.
 
 from __future__ import annotations
 
+from app.models.assessment import (
+    AnalysisResult,
+    Assessment,
+    AssessmentStatus,
+    AssessmentType,
+    AudioRecording,
+    RecordingTaskType,
+    RiskLevel,
+)
 from app.models.child import Child
 from app.models.kindergarten import Kindergarten
 from app.models.region import Region, RegionType
 from app.models.user import User, UserLanguage, UserRole
 
 __all__ = [
+    "AnalysisResult",
+    "Assessment",
+    "AssessmentStatus",
+    "AssessmentType",
+    "AudioRecording",
     "Child",
     "Kindergarten",
+    "RecordingTaskType",
     "Region",
     "RegionType",
+    "RiskLevel",
     "User",
     "UserLanguage",
     "UserRole",

@@ -1,5 +1,16 @@
 """Pydantic v2 request/response schemas."""
 
+from app.schemas.assessment import (
+    AnalysisDetailedPublic,
+    AnalysisPublic,
+    AssessmentAnalysisResponse,
+    AssessmentCreate,
+    AssessmentDetailedAnalysisResponse,
+    AssessmentPage,
+    AssessmentPublic,
+    AssessmentUpdate,
+    AudioRecordingPublic,
+)
 from app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
@@ -29,6 +40,15 @@ from app.schemas.region import (
 from app.schemas.user import UserPublic, UserUpdate
 
 __all__ = [
+    "AnalysisDetailedPublic",
+    "AnalysisPublic",
+    "AssessmentAnalysisResponse",
+    "AssessmentCreate",
+    "AssessmentDetailedAnalysisResponse",
+    "AssessmentPage",
+    "AssessmentPublic",
+    "AssessmentUpdate",
+    "AudioRecordingPublic",
     "ChildCreate",
     "ChildPage",
     "ChildPublic",

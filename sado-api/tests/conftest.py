@@ -7,6 +7,8 @@ so no external services (Postgres, Redis, MinIO) are required.
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
@@ -20,6 +22,9 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///./test_sado.db")
 os.environ.setdefault("CELERY_TASK_ALWAYS_EAGER", "true")
 # Loose rate limit so each test can issue plenty of /auth requests.
 os.environ.setdefault("RATE_LIMIT_AUTH_PER_MINUTE", "1000")
+# Keep the storage backend isolated per test session.
+_STORAGE_DIR = tempfile.mkdtemp(prefix="sado-storage-")
+os.environ.setdefault("LOCAL_STORAGE_DIR", _STORAGE_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -36,17 +41,20 @@ async def app():
     from app.database import create_all, drop_all, reset_engine
     from app.main import create_app
     from app.services.auth import get_deny_list
+    from app.services.storage import reset_audio_storage
 
     get_settings.cache_clear()
     await reset_engine()
     await reset_auth_rate_limiter()
     await get_deny_list().clear()
+    reset_audio_storage()
     await create_all()
     try:
         yield create_app()
     finally:
         await drop_all()
         await reset_engine()
+        reset_audio_storage()
 
 
 @pytest_asyncio.fixture()
@@ -70,3 +78,14 @@ def _cleanup_test_db() -> Iterator[None]:
             os.remove(path)
         except FileNotFoundError:
             pass
+    # Wipe storage between tests to keep keys isolated.
+    if os.path.isdir(_STORAGE_DIR):
+        for entry in os.listdir(_STORAGE_DIR):
+            full = os.path.join(_STORAGE_DIR, entry)
+            try:
+                if os.path.isdir(full):
+                    shutil.rmtree(full)
+                else:
+                    os.remove(full)
+            except FileNotFoundError:
+                pass
