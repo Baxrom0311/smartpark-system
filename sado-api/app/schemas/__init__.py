@@ -13,6 +13,19 @@ from app.schemas.child import (
     ChildPublic,
     ChildUpdate,
 )
+from app.schemas.kindergarten import (
+    KindergartenCreate,
+    KindergartenPage,
+    KindergartenPublic,
+    KindergartenStats,
+    KindergartenUpdate,
+)
+from app.schemas.region import (
+    RegionCreate,
+    RegionPage,
+    RegionPublic,
+    RegionUpdate,
+)
 from app.schemas.user import UserPublic, UserUpdate
 
 __all__ = [
@@ -20,9 +33,18 @@ __all__ = [
     "ChildPage",
     "ChildPublic",
     "ChildUpdate",
+    "KindergartenCreate",
+    "KindergartenPage",
+    "KindergartenPublic",
+    "KindergartenStats",
+    "KindergartenUpdate",
     "LoginRequest",
     "LogoutResponse",
     "RefreshRequest",
+    "RegionCreate",
+    "RegionPage",
+    "RegionPublic",
+    "RegionUpdate",
     "RegisterRequest",
     "TokenPair",
     "UserPublic",

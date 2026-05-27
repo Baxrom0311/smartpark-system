@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
@@ -49,25 +48,27 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-def require_roles(*roles: UserRole) -> "_RoleChecker":
-    """Build a dependency that asserts the user holds any of the roles."""
+def require_roles(*roles: UserRole):
+    """Build a dependency that asserts the user holds any of the roles.
 
-    return _RoleChecker(roles)
+    Returns a closure rather than a class instance — FastAPI inspects
+    dependency signatures with Pydantic's :class:`TypeAdapter`, which
+    chokes on forward-referenced ``Annotated[User, ...]`` aliases on
+    bound methods under ``from __future__ import annotations``. The
+    function form sidesteps the issue entirely.
+    """
 
+    allowed = {r.value for r in roles}
 
-class _RoleChecker:
-    """Callable FastAPI dependency for RBAC."""
-
-    def __init__(self, roles: Iterable[UserRole]) -> None:
-        self._roles = {r.value for r in roles}
-
-    async def __call__(self, user: CurrentUser) -> User:
-        if self._roles and user.role not in self._roles:
+    async def checker(user: User = Depends(get_current_user)) -> User:
+        if allowed and user.role not in allowed:
             raise ForbiddenError(
                 "You do not have permission to perform this action.",
                 code="INSUFFICIENT_ROLE",
             )
         return user
+
+    return checker
 
 
 def _client_ip(request: Request, x_forwarded_for: str | None) -> str:
