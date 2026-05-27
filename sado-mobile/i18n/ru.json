@@ -220,5 +220,15 @@
     "childrenInGroup": "Дети в группе ({{count}})",
     "noChildrenInGroup": "В этой группе пока нет детей",
     "notFound": "Группа не найдена"
+  },
+  "notifications": {
+    "permissionTitle": "Разрешить уведомления",
+    "permissionBody": "Включите уведомления, чтобы получать напоминания об оценке.",
+    "permissionGranted": "Уведомления включены",
+    "permissionDenied": "Уведомления отключены",
+    "reminderTitle": "Очередная оценка для {name}",
+    "reminderBody": "Самое время провести с {name} короткое речевое упражнение.",
+    "scheduled": "Напоминание запланировано на {{date}}",
+    "cancelled": "Напоминание отменено"
   }
 }

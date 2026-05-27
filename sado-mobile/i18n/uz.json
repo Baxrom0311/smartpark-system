@@ -220,5 +220,15 @@
     "childrenInGroup": "Guruhdagi bolalar ({{count}})",
     "noChildrenInGroup": "Bu guruhda hali bolalar yo'q",
     "notFound": "Guruh topilmadi"
+  },
+  "notifications": {
+    "permissionTitle": "Bildirishnomalarga ruxsat",
+    "permissionBody": "Baholash eslatmalarini olish uchun bildirishnomalarga ruxsat bering.",
+    "permissionGranted": "Bildirishnomalar yoqilgan",
+    "permissionDenied": "Bildirishnomalar o'chirilgan",
+    "reminderTitle": "{name} uchun navbatdagi baholash",
+    "reminderBody": "Bugun {name} bilan qisqa nutq mashqini o'tkazish vaqti keldi.",
+    "scheduled": "Eslatma {{date}} ga belgilandi",
+    "cancelled": "Eslatma bekor qilindi"
   }
 }

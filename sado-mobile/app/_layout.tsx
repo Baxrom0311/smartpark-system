@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { initI18n } from "@/i18n/config";
 import { AUTH_EXPIRED_EVENT } from "@/services/api";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthStore } from "@/stores/auth-store";
 
 // Keep splash visible while resources are loading. Hidden in the root effect.
@@ -33,6 +34,12 @@ const queryClient = new QueryClient({
 
 export default function RootLayout(): React.ReactElement {
   const [ready, setReady] = useState(false);
+  const authStatus = useAuthStore((state) => state.status);
+
+  // Only run the push-registration flow once the user has finished
+  // bootstrapping AND is authenticated — asking for notification
+  // permission before they've signed in is jarring on iOS.
+  useNotifications({ enabled: ready && authStatus === "authenticated" });
 
   useEffect(() => {
     let cancelled = false;
