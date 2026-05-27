@@ -157,6 +157,48 @@ export default function ParentHomeScreen(): React.ReactElement {
               <Badge tone="yellow" label={t("risk.yellow")} />
               <Badge tone="red" label={t("risk.red")} />
             </View>
+            <View className="mt-4 flex-row gap-2">
+              <Button
+                label={t("home.viewProgress")}
+                variant="outline"
+                size="sm"
+                fullWidth
+                onPress={() => router.push("/(parent)/progress")}
+              />
+            </View>
+          </Card>
+
+          <Card variant="outline" padding="lg">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-neutral-900">
+                {t("home.exercises")}
+              </Text>
+              <Button
+                label={t("home.viewExercises")}
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                onPress={() => router.push("/(parent)/exercises")}
+              />
+            </View>
+            <Text className="mt-2 text-sm text-neutral-600">
+              {t("home.todaysExercise")}
+            </Text>
+          </Card>
+
+          <Card variant="outline" padding="lg">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-neutral-900">
+                {t("home.profile")}
+              </Text>
+              <Button
+                label={t("common.continue")}
+                variant="ghost"
+                size="sm"
+                fullWidth={false}
+                onPress={() => router.push("/(parent)/profile")}
+              />
+            </View>
           </Card>
         </View>
 

@@ -17,7 +17,9 @@
     "signUp": "Ro'yxatdan o'tish",
     "ok": "OK",
     "tryAgain": "Qayta urining",
-    "close": "Yopish"
+    "close": "Yopish",
+    "minutes": "{{count}} daqiqa",
+    "empty": "Bu yerda hech narsa yo'q"
   },
   "onboarding": {
     "welcomeTitle": "SADO ga xush kelibsiz",
@@ -59,7 +61,11 @@
     "progress": "Bola taraqqiyoti",
     "noChildren": "Hali hech qanday bola qo'shilmagan",
     "noChildrenSubtitle": "Boshlash uchun bolangizni qo'shing",
-    "yourChildren": "Sizning bolalaringiz"
+    "yourChildren": "Sizning bolalaringiz",
+    "exercises": "Mashqlar",
+    "profile": "Profil",
+    "viewExercises": "Mashqlarni ko'rish",
+    "viewProgress": "Taraqqiyotni ko'rish"
   },
   "risk": {
     "green": "Yashil — me'yorda",
@@ -119,5 +125,79 @@
     "tasks": "Bajarilgan vazifalar",
     "noResults": "Natijalar mavjud emas",
     "backHome": "Bosh sahifaga"
+  },
+  "exercises": {
+    "title": "Mashqlar",
+    "subtitle": "Bolangiz uchun tavsiya etilgan mashqlar",
+    "tabs": {
+      "assigned": "Belgilangan",
+      "catalog": "Katalog"
+    },
+    "empty": "Hali mashqlar belgilanmagan",
+    "emptyCatalog": "Katalogda hech narsa topilmadi",
+    "selectChild": "Bolani tanlang",
+    "noChildren": "Bolangizni qo'shganingizdan keyin mashqlar paydo bo'ladi.",
+    "due": "Muddati: {{date}}",
+    "minutes": "{{count}} daqiqa",
+    "category": {
+      "articulation": "Artikulyatsiya",
+      "phonemic": "Fonemik eshitish",
+      "vocabulary": "So'z boyligi",
+      "grammar": "Grammatika",
+      "fluency": "Ravonlik",
+      "voice": "Ovoz",
+      "listening": "Tinglab tushunish"
+    },
+    "difficulty": {
+      "easy": "Oson",
+      "medium": "O'rta",
+      "hard": "Qiyin"
+    },
+    "status": {
+      "pending": "Kutilmoqda",
+      "in_progress": "Bajarilmoqda",
+      "completed": "Bajarildi",
+      "skipped": "O'tkazib yuborilgan"
+    },
+    "assign": "Bolaga belgilash",
+    "assignSuccess": "Mashq belgilandi",
+    "complete": "Tayyor deb belgilash",
+    "completed": "Bajarildi",
+    "completing": "Belgilanmoqda…",
+    "instructions": "Yo'riqnoma",
+    "noInstructions": "Yo'riqnoma yo'q",
+    "phonemes": "Tovushlar",
+    "playExample": "Misolni tinglash",
+    "noExample": "Audio misol yo'q",
+    "score": "Ball: {{score}}"
+  },
+  "progress": {
+    "title": "Bola taraqqiyoti",
+    "subtitle": "Oxirgi baholashlar",
+    "selectChild": "Bolani tanlang",
+    "empty": "Hali baholashlar yo'q",
+    "lastAssessment": "Oxirgi baholash: {{date}}",
+    "noDate": "—",
+    "completed": "{{count}} ta yakunlangan",
+    "summary": "Umumiy ko'rsatkich",
+    "trend": "Haftalik trend",
+    "exercisesCompleted": "Bajarilgan mashqlar"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Hisob va sozlamalar",
+    "name": "Ism",
+    "email": "Email",
+    "phone": "Telefon",
+    "role": "Rol",
+    "language": "Til",
+    "languageHint": "Interfeys tilini tanlang",
+    "save": "Saqlash",
+    "logout": "Chiqish",
+    "version": "Versiya {{version}}",
+    "roleParent": "Ota-ona",
+    "roleTeacher": "Tarbiyachi",
+    "roleTherapist": "Logoped",
+    "roleAdmin": "Administrator"
   }
 }

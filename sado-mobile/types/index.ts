@@ -109,29 +109,67 @@ export interface ChildCreateRequest {
 
 /* -------------------------------------------------------------- Exercises */
 
+export type ExerciseCategory =
+  | "articulation"
+  | "phonemic"
+  | "vocabulary"
+  | "grammar"
+  | "fluency"
+  | "voice"
+  | "listening";
+
+export type ExerciseAgeGroup = "toddler" | "preschool" | "school" | "tween";
+export type ExerciseDifficulty = "easy" | "medium" | "hard";
+
+export type AssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "skipped";
+
 export interface Exercise {
   id: string;
+  title: string;
+  description: string | null;
   category: string;
   age_group: string;
-  difficulty: number;
-  language: UserLanguage;
-  title: string;
-  description: string;
+  difficulty: string;
+  language: string;
+  duration_minutes: number;
   audio_example_path: string | null;
   image_path: string | null;
+  instructions: string | null;
+  target_phonemes: string | null;
+  is_active: boolean;
+  created_by_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ExerciseAssignment {
   id: string;
   child_id: string;
   exercise_id: string;
-  assigned_by: string;
+  assigned_by_id: string | null;
+  status: AssignmentStatus;
   due_date: string | null;
   completed_at: string | null;
   score: number | null;
+  notes: string | null;
   created_at: string;
+  updated_at: string;
   exercise: Exercise | null;
+}
+
+export interface ExerciseAssignmentCreateRequest {
+  exercise_id: string;
+  due_date?: string | null;
+  notes?: string | null;
+}
+
+export interface ExerciseAssignmentCompleteRequest {
+  score?: number | null;
+  notes?: string | null;
 }
 
 /* ------------------------------------------------------------- Assessments */

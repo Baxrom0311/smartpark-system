@@ -17,7 +17,9 @@
     "signUp": "Регистрация",
     "ok": "OK",
     "tryAgain": "Попробуйте ещё раз",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "minutes": "{{count}} мин",
+    "empty": "Здесь пока пусто"
   },
   "onboarding": {
     "welcomeTitle": "Добро пожаловать в SADO",
@@ -59,7 +61,11 @@
     "progress": "Прогресс ребёнка",
     "noChildren": "Дети ещё не добавлены",
     "noChildrenSubtitle": "Добавьте ребёнка, чтобы начать",
-    "yourChildren": "Ваши дети"
+    "yourChildren": "Ваши дети",
+    "exercises": "Упражнения",
+    "profile": "Профиль",
+    "viewExercises": "Открыть упражнения",
+    "viewProgress": "Открыть прогресс"
   },
   "risk": {
     "green": "Зелёный — норма",
@@ -119,5 +125,79 @@
     "tasks": "Выполненные задания",
     "noResults": "Результатов пока нет",
     "backHome": "На главную"
+  },
+  "exercises": {
+    "title": "Упражнения",
+    "subtitle": "Рекомендованные упражнения для ребёнка",
+    "tabs": {
+      "assigned": "Назначенные",
+      "catalog": "Каталог"
+    },
+    "empty": "Пока нет назначенных упражнений",
+    "emptyCatalog": "В каталоге ничего не найдено",
+    "selectChild": "Выберите ребёнка",
+    "noChildren": "Добавьте ребёнка, чтобы появились упражнения.",
+    "due": "Срок: {{date}}",
+    "minutes": "{{count}} мин",
+    "category": {
+      "articulation": "Артикуляция",
+      "phonemic": "Фонематический слух",
+      "vocabulary": "Словарный запас",
+      "grammar": "Грамматика",
+      "fluency": "Плавность",
+      "voice": "Голос",
+      "listening": "Аудирование"
+    },
+    "difficulty": {
+      "easy": "Легко",
+      "medium": "Средне",
+      "hard": "Сложно"
+    },
+    "status": {
+      "pending": "Ожидает",
+      "in_progress": "Выполняется",
+      "completed": "Готово",
+      "skipped": "Пропущено"
+    },
+    "assign": "Назначить ребёнку",
+    "assignSuccess": "Упражнение назначено",
+    "complete": "Отметить как выполненное",
+    "completed": "Выполнено",
+    "completing": "Сохранение…",
+    "instructions": "Инструкции",
+    "noInstructions": "Инструкции отсутствуют",
+    "phonemes": "Звуки",
+    "playExample": "Прослушать пример",
+    "noExample": "Аудио-пример отсутствует",
+    "score": "Балл: {{score}}"
+  },
+  "progress": {
+    "title": "Прогресс ребёнка",
+    "subtitle": "Последние оценки",
+    "selectChild": "Выберите ребёнка",
+    "empty": "Пока нет оценок",
+    "lastAssessment": "Последняя оценка: {{date}}",
+    "noDate": "—",
+    "completed": "Завершено: {{count}}",
+    "summary": "Общий показатель",
+    "trend": "Недельный тренд",
+    "exercisesCompleted": "Выполнено упражнений"
+  },
+  "profile": {
+    "title": "Профиль",
+    "subtitle": "Аккаунт и настройки",
+    "name": "Имя",
+    "email": "Email",
+    "phone": "Телефон",
+    "role": "Роль",
+    "language": "Язык",
+    "languageHint": "Выберите язык интерфейса",
+    "save": "Сохранить",
+    "logout": "Выйти",
+    "version": "Версия {{version}}",
+    "roleParent": "Родитель",
+    "roleTeacher": "Воспитатель",
+    "roleTherapist": "Логопед",
+    "roleAdmin": "Администратор"
   }
 }
