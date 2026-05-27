@@ -204,6 +204,21 @@ export default function ParentHomeScreen(): React.ReactElement {
               />
             </View>
           </Card>
+
+          <Card variant="outline" padding="lg">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-neutral-900">
+                {t("home.settings")}
+              </Text>
+              <Button
+                label={t("common.continue")}
+                variant="ghost"
+                size="sm"
+                fullWidth={false}
+                onPress={() => router.push("/(parent)/settings")}
+              />
+            </View>
+          </Card>
         </View>
 
         <View className="mt-8 items-center">
