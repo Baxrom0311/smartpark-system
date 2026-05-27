@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "SADO",
+    "tagline": "Болалар учун AI нутқ терапияси",
+    "continue": "Davom etish",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "delete": "O'chirish",
+    "back": "Orqaga",
+    "next": "Keyingi",
+    "done": "Tayyor",
+    "loading": "Yuklanmoqda…",
+    "error": "Xatolik",
+    "retry": "Qayta urinish",
+    "logout": "Chiqish",
+    "signIn": "Kirish",
+    "signUp": "Ro'yxatdan o'tish"
+  },
+  "onboarding": {
+    "welcomeTitle": "SADO ga xush kelibsiz",
+    "welcomeSubtitle": "Bolangiz nutqini erta aniqlash uchun o'yinli baholash",
+    "languageTitle": "Tilni tanlang",
+    "languageUz": "O'zbekcha",
+    "languageRu": "Ruscha",
+    "roleTitle": "Sizning rolingiz",
+    "roleParent": "Ota-ona",
+    "roleTeacher": "Tarbiyachi",
+    "getStarted": "Boshlash"
+  },
+  "auth": {
+    "loginTitle": "Hisobingizga kiring",
+    "loginSubtitle": "Bolangiz natijalariga kirish uchun",
+    "registerTitle": "Yangi hisob yaratish",
+    "registerSubtitle": "Ota-onalar va tarbiyachilar uchun",
+    "fieldEmail": "Email",
+    "fieldPhone": "Telefon raqami",
+    "fieldPassword": "Parol",
+    "fieldFullName": "To'liq ism",
+    "useEmail": "Email orqali",
+    "usePhone": "Telefon orqali",
+    "submit": "Davom etish",
+    "switchToRegister": "Hisobingiz yo'qmi? Ro'yxatdan o'ting",
+    "switchToLogin": "Hisobingiz bormi? Kiring",
+    "passwordMin": "Parol kamida 8 ta belgidan iborat bo'lsin",
+    "identifierRequired": "Email yoki telefon raqami kerak",
+    "invalidPhone": "Telefon raqami noto'g'ri",
+    "invalidEmail": "Email noto'g'ri",
+    "registrationSuccess": "Ro'yxatdan o'tdingiz. Endi tizimga kiring.",
+    "credentialsInvalid": "Login yoki parol noto'g'ri"
+  },
+  "home": {
+    "greeting": "Salom, {{name}}!",
+    "addChild": "Bola qo'shish",
+    "startAssessment": "Baholashni boshlash",
+    "todaysExercise": "Bugungi mashq",
+    "progress": "Bola taraqqiyoti",
+    "noChildren": "Hali hech qanday bola qo'shilmagan",
+    "noChildrenSubtitle": "Boshlash uchun bolangizni qo'shing"
+  },
+  "risk": {
+    "green": "Yashil — me'yorda",
+    "yellow": "Sariq — kuzatuv",
+    "red": "Qizil — mutaxassisga"
+  }
+}

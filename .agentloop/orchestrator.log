@@ -1,0 +1,15 @@
+[agentloop] Resuming from: /Users/baxrom/ish_full/hilola/orchestrator/.agentloop/runs/20260526_213037
+[agentloop] Resumed: pc=1 rc=2 bi=9 builds=16
+[agentloop] project: /Users/baxrom/ish_full/hilola/orchestrator
+[agentloop] logs:    /Users/baxrom/ish_full/hilola/orchestrator/.agentloop/runs/20260526_213037
+[agentloop] cycles:  plan=5  review=2  build=12
+[agentloop] roles:   planner=ai-planner  builder=ai-builder  reviewer=ai-reviewer
+
+============================================================
+[agentloop] PLAN CYCLE 1/5
+============================================================
+
+  --------------------------------------------------
+  [agentloop] REVIEW CYCLE 2/2
+  --------------------------------------------------
+    [agentloop] Build 9/12  (total #17)

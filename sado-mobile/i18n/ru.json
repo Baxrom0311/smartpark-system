@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "SADO",
+    "tagline": "AI-логопедия для детей",
+    "continue": "Продолжить",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "back": "Назад",
+    "next": "Далее",
+    "done": "Готово",
+    "loading": "Загрузка…",
+    "error": "Ошибка",
+    "retry": "Повторить",
+    "logout": "Выйти",
+    "signIn": "Войти",
+    "signUp": "Регистрация"
+  },
+  "onboarding": {
+    "welcomeTitle": "Добро пожаловать в SADO",
+    "welcomeSubtitle": "Игровая оценка речи ребёнка",
+    "languageTitle": "Выберите язык",
+    "languageUz": "Узбекский",
+    "languageRu": "Русский",
+    "roleTitle": "Ваша роль",
+    "roleParent": "Родитель",
+    "roleTeacher": "Воспитатель",
+    "getStarted": "Начать"
+  },
+  "auth": {
+    "loginTitle": "Войдите в аккаунт",
+    "loginSubtitle": "Чтобы видеть результаты ребёнка",
+    "registerTitle": "Создать аккаунт",
+    "registerSubtitle": "Для родителей и воспитателей",
+    "fieldEmail": "Email",
+    "fieldPhone": "Телефон",
+    "fieldPassword": "Пароль",
+    "fieldFullName": "Полное имя",
+    "useEmail": "По email",
+    "usePhone": "По телефону",
+    "submit": "Продолжить",
+    "switchToRegister": "Нет аккаунта? Зарегистрируйтесь",
+    "switchToLogin": "Уже есть аккаунт? Войдите",
+    "passwordMin": "Пароль должен быть не менее 8 символов",
+    "identifierRequired": "Укажите email или телефон",
+    "invalidPhone": "Неверный номер телефона",
+    "invalidEmail": "Неверный email",
+    "registrationSuccess": "Регистрация прошла успешно. Войдите.",
+    "credentialsInvalid": "Неверный логин или пароль"
+  },
+  "home": {
+    "greeting": "Привет, {{name}}!",
+    "addChild": "Добавить ребёнка",
+    "startAssessment": "Начать оценку",
+    "todaysExercise": "Упражнение на сегодня",
+    "progress": "Прогресс ребёнка",
+    "noChildren": "Дети ещё не добавлены",
+    "noChildrenSubtitle": "Добавьте ребёнка, чтобы начать"
+  },
+  "risk": {
+    "green": "Зелёный — норма",
+    "yellow": "Жёлтый — наблюдение",
+    "red": "Красный — к специалисту"
+  }
+}
