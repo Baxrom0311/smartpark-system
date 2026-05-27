@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type { CreateUserPayload } from "@/lib/validation/user";
 import type { CursorPage, UserPublic, UserRole } from "@/types";
 
@@ -63,6 +64,10 @@ export function useCreateUser(): UseMutationResult<
     onSuccess: async (created) => {
       qc.setQueryData(["users", "detail", created.id], created);
       await qc.invalidateQueries({ queryKey: ["users"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type { Child, CursorPage } from "@/types";
 
 interface UseChildrenParams {
@@ -88,6 +89,10 @@ export function useUpdateChild(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["children", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["children"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -100,6 +105,10 @@ export function useDeleteChild(): UseMutationResult<void, Error, string> {
     onSuccess: async (_void, childId) => {
       qc.removeQueries({ queryKey: ["children", "detail", childId] });
       await qc.invalidateQueries({ queryKey: ["children"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

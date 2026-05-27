@@ -25,6 +25,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type {
   CursorPage,
   Notification,
@@ -158,6 +159,9 @@ export function useMarkNotificationRead(): UseMutationResult<
       patchNotificationInCache(qc, next);
       await qc.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
     },
+    onError: (err) => {
+      notifyError(err);
+    },
   });
 }
 
@@ -191,6 +195,10 @@ export function useMarkAllNotificationsRead(): UseMutationResult<
         unread: 0,
       });
       await qc.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -206,6 +214,10 @@ export function useArchiveNotification(): UseMutationResult<
     onSuccess: async (_void, id) => {
       removeNotificationFromCache(qc, id);
       await qc.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type { UserLanguage, UserPublic } from "@/types";
 
 /**
@@ -61,6 +62,10 @@ export function useUpdateProfile(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["users", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["users"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -88,6 +93,10 @@ export function useToggleUserActive(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["users", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["users"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type { CursorPage, Kindergarten, KindergartenStats } from "@/types";
 
 interface UseKindergartensParams {
@@ -98,6 +99,10 @@ export function useUpdateKindergarten(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["kindergartens", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["kindergartens"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -115,6 +120,10 @@ export function useDeleteKindergarten(): UseMutationResult<
       qc.removeQueries({ queryKey: ["kindergartens", "detail", kgId] });
       qc.removeQueries({ queryKey: ["kindergartens", "stats", kgId] });
       await qc.invalidateQueries({ queryKey: ["kindergartens"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

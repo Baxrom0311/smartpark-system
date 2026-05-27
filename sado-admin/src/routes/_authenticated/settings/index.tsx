@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUiStore } from "@/stores/ui-store";
@@ -78,6 +79,10 @@ function SettingsPage() {
       if (next.language && next.language !== i18n.language) {
         await i18n.changeLanguage(next.language);
       }
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 

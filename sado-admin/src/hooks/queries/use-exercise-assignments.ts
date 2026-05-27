@@ -17,6 +17,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type {
   AssignmentStatus,
   CursorPage,
@@ -80,6 +81,10 @@ export function useAssignExercise(): UseMutationResult<
       await qc.invalidateQueries({
         queryKey: [...ASSIGNMENTS_KEY, "list", vars.childId],
       });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -111,6 +116,10 @@ export function useCompleteAssignment(): UseMutationResult<
       await qc.invalidateQueries({
         queryKey: [...ASSIGNMENTS_KEY, "list", vars.childId],
       });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -134,6 +143,10 @@ export function useDeleteAssignment(): UseMutationResult<
       await qc.invalidateQueries({
         queryKey: [...ASSIGNMENTS_KEY, "list", vars.childId],
       });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

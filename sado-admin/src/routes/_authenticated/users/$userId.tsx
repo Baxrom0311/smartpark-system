@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { InfoRow } from "@/components/shared/info-row";
 import { PageHeader } from "@/components/shared/page-header";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,6 +161,8 @@ function UserDetailPage() {
           <ArrowLeft className="h-4 w-4" /> {t("common.back")}
         </button>
       </div>
+
+      <Breadcrumbs />
 
       <PageHeader
         title={user.full_name || user.email || user.phone || user.id}

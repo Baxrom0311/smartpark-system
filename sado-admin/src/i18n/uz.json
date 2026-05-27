@@ -54,7 +54,24 @@
     "create": "Yaratish",
     "search": "Qidirish",
     "back": "Orqaga",
-    "empty": "Hech narsa topilmadi"
+    "empty": "Hech narsa topilmadi",
+    "saved": "Saqlandi"
+  },
+  "breadcrumb": {
+    "aria": "Sahifa yo'li",
+    "dashboard": "Boshqaruv paneli",
+    "users": "Foydalanuvchilar",
+    "userDetail": "Foydalanuvchi",
+    "children": "Bolalar",
+    "childDetail": "Bola",
+    "kindergartens": "Bog'chalar",
+    "kindergartenDetail": "Bog'cha",
+    "exercises": "Mashqlar",
+    "exerciseDetail": "Mashq",
+    "notifications": "Bildirishnomalar",
+    "statistics": "Statistika",
+    "settings": "Sozlamalar",
+    "analysis": "Tahlil"
   },
   "theme": {
     "light": "Yorug'",

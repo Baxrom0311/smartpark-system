@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { InfoRow } from "@/components/shared/info-row";
 import { PageHeader } from "@/components/shared/page-header";
+import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { ChildAssignmentsCard } from "@/components/children/child-assignments-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

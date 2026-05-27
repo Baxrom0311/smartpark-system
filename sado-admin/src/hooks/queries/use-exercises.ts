@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { notifyError, notifySuccess } from "@/lib/notify";
 import type { CursorPage, Exercise, UserLanguage } from "@/types";
 
 interface UseExercisesParams {
@@ -118,6 +119,10 @@ export function useUpdateExercise(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["exercises", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["exercises"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -131,6 +136,10 @@ export function useDeleteExercise(): UseMutationResult<void, Error, string> {
     onSuccess: async (_void, exerciseId) => {
       qc.removeQueries({ queryKey: ["exercises", "detail", exerciseId] });
       await qc.invalidateQueries({ queryKey: ["exercises"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -167,6 +176,10 @@ export function useUploadExerciseAsset(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["exercises", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["exercises"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }
@@ -191,6 +204,10 @@ export function useDeleteExerciseAsset(): UseMutationResult<
     onSuccess: async (next) => {
       qc.setQueryData(["exercises", "detail", next.id], next);
       await qc.invalidateQueries({ queryKey: ["exercises"] });
+      notifySuccess();
+    },
+    onError: (err) => {
+      notifyError(err);
     },
   });
 }

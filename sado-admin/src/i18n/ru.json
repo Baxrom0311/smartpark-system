@@ -54,7 +54,24 @@
     "create": "Создать",
     "search": "Поиск",
     "back": "Назад",
-    "empty": "Ничего не найдено"
+    "empty": "Ничего не найдено",
+    "saved": "Сохранено"
+  },
+  "breadcrumb": {
+    "aria": "Путь по странице",
+    "dashboard": "Панель управления",
+    "users": "Пользователи",
+    "userDetail": "Пользователь",
+    "children": "Дети",
+    "childDetail": "Ребёнок",
+    "kindergartens": "Детские сады",
+    "kindergartenDetail": "Сад",
+    "exercises": "Упражнения",
+    "exerciseDetail": "Упражнение",
+    "notifications": "Уведомления",
+    "statistics": "Статистика",
+    "settings": "Настройки",
+    "analysis": "Анализ"
   },
   "theme": {
     "light": "Светлая",
