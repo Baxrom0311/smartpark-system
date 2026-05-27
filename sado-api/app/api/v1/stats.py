@@ -15,7 +15,7 @@ Authorization:
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -35,8 +35,8 @@ from app.models.user import User, UserRole
 from app.schemas.stats import (
     DailyAssessmentPoint,
     KindergartenStatRow,
-    RegionStat,
     RegionalStatsResponse,
+    RegionStat,
     RiskDistribution,
     RolePopulation,
     SystemStatsResponse,
@@ -51,11 +51,11 @@ WEEK_DAYS = 7
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _start_of_day(dt: datetime) -> datetime:
-    return datetime.combine(dt.date(), time.min, tzinfo=timezone.utc)
+    return datetime.combine(dt.date(), time.min, tzinfo=UTC)
 
 
 def _coerce_risk_bucket(value: str | None) -> str:
@@ -111,7 +111,7 @@ async def _daily_assessments(
         if created_at is None:
             continue
         if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+            created_at = created_at.replace(tzinfo=UTC)
         bucket[created_at.date().isoformat()] += 1
 
     points: list[DailyAssessmentPoint] = []

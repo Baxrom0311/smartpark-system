@@ -41,20 +41,20 @@ class Region(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    parent: Mapped["Region | None"] = relationship(
+    parent: Mapped[Region | None] = relationship(
         "Region",
         remote_side="Region.id",
         back_populates="children",
     )
-    children: Mapped[list["Region"]] = relationship(
+    children: Mapped[list[Region]] = relationship(
         "Region",
         back_populates="parent",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
 
-    users: Mapped[list["User"]] = relationship("User", back_populates="region")
-    kindergartens: Mapped[list["Kindergarten"]] = relationship(
+    users: Mapped[list[User]] = relationship("User", back_populates="region")
+    kindergartens: Mapped[list[Kindergarten]] = relationship(
         "Kindergarten", back_populates="region"
     )
 

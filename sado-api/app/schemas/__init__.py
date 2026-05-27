@@ -57,8 +57,8 @@ from app.schemas.region import (
 from app.schemas.stats import (
     DailyAssessmentPoint,
     KindergartenStatRow,
-    RegionStat,
     RegionalStatsResponse,
+    RegionStat,
     RiskDistribution,
     RolePopulation,
     SystemStatsResponse,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 import pytest
 from jose import jwt
@@ -70,9 +70,9 @@ def test_decode_rejects_garbage() -> None:
 def test_decode_rejects_expired_token() -> None:
     settings = get_settings()
     # Manually craft an already-expired token signed with the same key.
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    issued = datetime.now(timezone.utc) - timedelta(hours=2)
+    issued = datetime.now(UTC) - timedelta(hours=2)
     expired_at = issued + timedelta(minutes=1)
     claims = {
         "sub": "u",

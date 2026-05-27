@@ -31,7 +31,6 @@ from app.core.security import (
 from app.models.user import User, UserLanguage, UserRole
 from app.schemas.auth import LoginRequest, RegisterRequest
 
-
 # ----------------------------------------------------------------- Revocation
 
 

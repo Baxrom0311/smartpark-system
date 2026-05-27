@@ -11,7 +11,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -63,7 +63,7 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Boolean, nullable=False, default=False, index=True
     )
 
-    user: Mapped["User"] = relationship("User")
+    user: Mapped[User] = relationship("User")
 
     def __repr__(self) -> str:  # pragma: no cover - debug only
         return f"<Notification {self.id} type={self.type} user={self.user_id}>"

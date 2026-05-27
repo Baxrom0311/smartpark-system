@@ -79,9 +79,10 @@ async def test_alembic_migration_applies_on_sqlite(tmp_path, monkeypatch) -> Non
     await reset_engine()
 
     # Run the migration through Alembic's Python API.
-    from alembic.config import Config
-    from alembic import command
     import os
+
+    from alembic import command
+    from alembic.config import Config
 
     cfg = Config()
     cfg.set_main_option(
@@ -92,8 +93,9 @@ async def test_alembic_migration_applies_on_sqlite(tmp_path, monkeypatch) -> Non
     command.upgrade(cfg, "head")
 
     # After upgrade, the engine should see the same tables we declare.
-    from app.database import get_engine
     from sqlalchemy import inspect
+
+    from app.database import get_engine
 
     def _list(connection):  # type: ignore[no-untyped-def]
         return inspect(connection).get_table_names()

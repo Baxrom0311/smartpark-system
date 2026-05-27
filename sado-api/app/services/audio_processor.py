@@ -16,7 +16,7 @@ This module is invoked synchronously from the assessment endpoint
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -105,7 +105,7 @@ async def process_recording(
 
     recording.processed = True
     recording.processing_error = None
-    recording.processed_at = datetime.now(timezone.utc)
+    recording.processed_at = datetime.now(UTC)
     if recording.duration_sec is None:
         recording.duration_sec = features.duration_sec
     if recording.sample_rate is None:
@@ -169,7 +169,7 @@ async def _maybe_finalize_assessment(
     assessment.status = AssessmentStatus.COMPLETED.value
     assessment.overall_risk = aggregate.risk_level
     assessment.overall_confidence = aggregate.confidence
-    assessment.completed_at = datetime.now(timezone.utc)
+    assessment.completed_at = datetime.now(UTC)
     assessment.summary = (
         f"Aggregated risk={aggregate.risk_level} from {len(analyses)} recording(s)."
     )

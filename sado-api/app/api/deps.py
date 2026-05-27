@@ -15,7 +15,6 @@ from app.database import get_session
 from app.models.user import User, UserRole
 from app.services.auth import get_deny_list
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 DBSession = Annotated[AsyncSession, Depends(get_session)]

@@ -15,12 +15,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Text,
 )
@@ -113,9 +113,9 @@ class Assessment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
 
-    child: Mapped["Child"] = relationship("Child", lazy="joined")
-    created_by: Mapped["User | None"] = relationship("User")
-    recordings: Mapped[list["AudioRecording"]] = relationship(
+    child: Mapped[Child] = relationship("Child", lazy="joined")
+    created_by: Mapped[User | None] = relationship("User")
+    recordings: Mapped[list[AudioRecording]] = relationship(
         "AudioRecording",
         back_populates="assessment",
         cascade="all, delete-orphan",
@@ -158,10 +158,10 @@ class AudioRecording(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
 
-    assessment: Mapped["Assessment"] = relationship(
+    assessment: Mapped[Assessment] = relationship(
         "Assessment", back_populates="recordings"
     )
-    analysis: Mapped["AnalysisResult | None"] = relationship(
+    analysis: Mapped[AnalysisResult | None] = relationship(
         "AnalysisResult",
         back_populates="recording",
         uselist=False,
@@ -209,7 +209,7 @@ class AnalysisResult(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     model_name: Mapped[str] = mapped_column(String(100), nullable=False, default="mock-xgb-v1")
     model_version: Mapped[str] = mapped_column(String(40), nullable=False, default="0.1.0")
 
-    recording: Mapped["AudioRecording"] = relationship(
+    recording: Mapped[AudioRecording] = relationship(
         "AudioRecording", back_populates="analysis"
     )
 

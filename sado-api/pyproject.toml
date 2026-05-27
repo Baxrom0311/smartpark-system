@@ -64,3 +64,45 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N"]
 ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI idiomatically uses these calls in default arguments.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Header",
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Security",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use module-level imports inside functions for fixture isolation.
+"tests/**/*.py" = ["E402"]
+"alembic/versions/**/*.py" = ["E402"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+# greenlet is required to trace SQLAlchemy async ORM operations; thread
+# covers any plain ThreadPoolExecutor work (e.g. asyncio.to_thread).
+concurrency = ["greenlet", "thread"]
+omit = [
+    "tests/*",
+    "alembic/*",
+    "app/workers/celery_app.py",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]

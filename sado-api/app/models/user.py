@@ -76,10 +76,10 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    region: Mapped["Region | None"] = relationship(
+    region: Mapped[Region | None] = relationship(
         "Region", back_populates="users", lazy="joined"
     )
-    children: Mapped[list["Child"]] = relationship(
+    children: Mapped[list[Child]] = relationship(
         "Child",
         back_populates="parent",
         cascade="all, delete-orphan",

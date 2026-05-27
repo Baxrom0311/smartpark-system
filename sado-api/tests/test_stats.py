@@ -330,9 +330,10 @@ async def test_kindergarten_stats_teacher_region_restriction(client) -> None:
     teacher_email = "teach@sado.uz"
     await _register_login(client, teacher_email, role="teacher")
     # Attach teacher to region_y directly.
+    from sqlalchemy import select
+
     from app.database import get_sessionmaker
     from app.models.user import User
-    from sqlalchemy import select
 
     factory = get_sessionmaker()
     async with factory() as session:

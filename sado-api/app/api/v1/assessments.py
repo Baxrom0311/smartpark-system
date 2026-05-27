@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, Path, Query, Response, UploadFile, status
@@ -190,7 +190,7 @@ async def create_assessment(
         created_by_id=user.id,
         type=payload.type,
         status=AssessmentStatus.PENDING.value,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(UTC),
     )
     session.add(assessment)
     await session.commit()

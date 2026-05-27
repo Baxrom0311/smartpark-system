@@ -93,13 +93,13 @@ def _gen_mfcc(rng: random.Random, n_frames: int, n_mfcc: int = 13) -> dict[str, 
         "n_mfcc": n_mfcc,
         "n_frames": n_frames,
         "matrix": matrix,
-        "mean": [round(sum(c) / len(c), 3) for c in zip(*matrix)] if matrix else [],
+        "mean": [round(sum(c) / len(c), 3) for c in zip(*matrix, strict=False)] if matrix else [],
         "std": [
             round(
                 math.sqrt(sum((x - sum(c) / len(c)) ** 2 for x in c) / len(c)),
                 3,
             )
-            for c in zip(*matrix)
+            for c in zip(*matrix, strict=False)
         ]
         if matrix
         else [],

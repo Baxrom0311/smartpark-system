@@ -15,7 +15,6 @@ from app.models.exercise import (
     ExerciseDifficulty,
 )
 
-
 TitleStr = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
 ]

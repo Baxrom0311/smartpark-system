@@ -22,7 +22,6 @@ from pydantic import (
 
 from app.models.user import UserLanguage, UserRole
 
-
 # Phones in this market are typically +998 followed by 9 digits.
 # We keep the validator generic — accept E.164-ish strings of 8–20 chars.
 PHONE_RE = re.compile(r"^\+?[0-9]{8,20}$")
@@ -60,7 +59,7 @@ class RegisterRequest(BaseModel):
         return _normalize_phone(value)
 
     @model_validator(mode="after")
-    def _require_identifier(self) -> "RegisterRequest":
+    def _require_identifier(self) -> RegisterRequest:
         if not self.email and not self.phone:
             raise ValueError("Either email or phone must be provided.")
         # Self-service registration is restricted to non-staff roles to
@@ -86,7 +85,7 @@ class LoginRequest(BaseModel):
         return _normalize_phone(value)
 
     @model_validator(mode="after")
-    def _require_identifier(self) -> "LoginRequest":
+    def _require_identifier(self) -> LoginRequest:
         if not self.email and not self.phone:
             raise ValueError("Either email or phone must be provided.")
         return self

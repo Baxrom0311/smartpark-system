@@ -160,25 +160,25 @@ class ChildPublic(BaseModel):
     )
 
     @classmethod
-    def from_model(cls, child: object) -> "ChildPublic":
+    def from_model(cls, child: object) -> ChildPublic:
         """Build from an ORM ``Child`` instance and compute ``age_years``."""
 
         today = date.today()
-        bdate: date = getattr(child, "birth_date")
+        bdate: date = child.birth_date
         age = today.year - bdate.year - (
             (today.month, today.day) < (bdate.month, bdate.day)
         )
         return cls(
-            id=getattr(child, "id"),
-            name=getattr(child, "name"),
+            id=child.id,
+            name=child.name,
             birth_date=bdate,
-            gender=getattr(child, "gender"),
-            language=getattr(child, "language"),
-            notes=getattr(child, "notes"),
-            parent_id=getattr(child, "parent_id"),
-            kindergarten_id=getattr(child, "kindergarten_id"),
-            created_at=getattr(child, "created_at"),
-            updated_at=getattr(child, "updated_at"),
+            gender=child.gender,
+            language=child.language,
+            notes=child.notes,
+            parent_id=child.parent_id,
+            kindergarten_id=child.kindergarten_id,
+            created_at=child.created_at,
+            updated_at=child.updated_at,
             age_years=max(0, age),
         )
 

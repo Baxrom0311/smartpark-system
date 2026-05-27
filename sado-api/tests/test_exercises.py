@@ -116,9 +116,10 @@ async def _login_therapist(client, email: str = "therapist@example.com"):
 async def _create_child_for(parent_id: str, name: str = "Ali") -> str:
     """Insert a child via the ORM and return its id."""
 
+    from datetime import date
+
     from app.database import get_sessionmaker
     from app.models.child import Child
-    from datetime import date
 
     factory = get_sessionmaker()
     async with factory() as session:

@@ -73,7 +73,7 @@ class AssessmentPublic(BaseModel):
     recordings: list[AudioRecordingPublic] = Field(default_factory=list)
 
     @classmethod
-    def from_model(cls, assessment: Any) -> "AssessmentPublic":
+    def from_model(cls, assessment: Any) -> AssessmentPublic:
         # ``recordings`` may not be loaded for freshly-created or
         # eager-loaded objects across async session boundaries. Detect
         # that and substitute an empty list rather than triggering an

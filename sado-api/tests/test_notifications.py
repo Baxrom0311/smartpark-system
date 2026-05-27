@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC
+
 import pytest
 
 pytestmark = pytest.mark.asyncio
@@ -67,7 +69,7 @@ async def _seed_notification(
     read: bool = False,
     archived: bool = False,
 ) -> str:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from app.database import get_sessionmaker
     from app.models.notification import Notification
@@ -79,7 +81,7 @@ async def _seed_notification(
             type=type,
             title=title,
             body=body,
-            read_at=datetime.now(timezone.utc) if read else None,
+            read_at=datetime.now(UTC) if read else None,
             is_archived=archived,
         )
         session.add(notif)

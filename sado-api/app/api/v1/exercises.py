@@ -14,7 +14,7 @@ Authorisation summary:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response, status
@@ -600,7 +600,7 @@ async def update_assignment(
         new_status = data["status"]
         assignment.status = new_status
         if new_status == AssignmentStatus.COMPLETED.value and assignment.completed_at is None:
-            assignment.completed_at = datetime.now(timezone.utc)
+            assignment.completed_at = datetime.now(UTC)
         if new_status != AssignmentStatus.COMPLETED.value and assignment.completed_at is not None:
             # Re-opening an assignment clears completion timestamp.
             assignment.completed_at = None
@@ -635,7 +635,7 @@ async def complete_assignment(
         )
 
     assignment.status = AssignmentStatus.COMPLETED.value
-    assignment.completed_at = datetime.now(timezone.utc)
+    assignment.completed_at = datetime.now(UTC)
     if payload.score is not None:
         assignment.score = payload.score
     if payload.notes is not None:

@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 from app.models.user import UserLanguage, UserRole
 
-
 NameStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 
 

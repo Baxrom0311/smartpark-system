@@ -16,7 +16,7 @@ notifications for anyone.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query, Response, status
@@ -160,7 +160,7 @@ async def mark_read(
     _ensure_owner(user, notif)
 
     if notif.read_at is None:
-        notif.read_at = datetime.now(timezone.utc)
+        notif.read_at = datetime.now(UTC)
         await session.commit()
         await session.refresh(notif)
     return NotificationPublic.model_validate(notif)
@@ -174,7 +174,7 @@ async def mark_read(
 async def mark_all_read(
     user: CurrentUser, session: DBSession
 ) -> UnreadCountResponse:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     stmt = (
         update(Notification)
         .where(

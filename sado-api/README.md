@@ -119,9 +119,31 @@ python -c "from app.main import app; print('ok')"
 # Test-suite
 python -m pytest -q
 
+# Test-suite with coverage (matches CI threshold)
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=80 -q
+
 # Linting
-python -m ruff check app tests
+ruff check .
 ```
+
+---
+
+## Continuous Integration
+
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs three
+jobs on every push / PR to `main`:
+
+| Job     | Tools                                    | Gate                          |
+| ------- | ---------------------------------------- | ----------------------------- |
+| `lint`  | `ruff check .`                           | zero lint errors              |
+| `test`  | `pytest --cov=app --cov-fail-under=80`   | all tests green, coverage ≥80%|
+| `docker`| `docker compose config -q` + image build | compose file & Dockerfile OK  |
+
+> **Coverage configuration.** `pyproject.toml` configures coverage with
+> `concurrency = ["greenlet", "thread"]` so SQLAlchemy's async ORM
+> traffic (which travels through greenlet under the hood) is traced
+> correctly. Without it the audio-pipeline coverage shows up as ~30 %
+> even when those code paths execute. The CI floor is **80 %**.
 
 ---
 
@@ -149,7 +171,7 @@ The implementation follows the milestone plan in
 
 1. **Foundation** — scaffold, DB models, JWT auth, core CRUD ✅
 2. **Core features** — audio upload, Celery workers, ML scoring mock ✅
-3. **Polish** — tests, error handling, **Docker Compose** ✅, health checks ✅, CI (next)
+3. **Polish** — tests, error handling, **Docker Compose** ✅, health checks ✅, **CI** ✅
 
 External services (Whisper, XGBoost, push notifications) are mocked
 with deterministic fakes for local development; nothing in this repo

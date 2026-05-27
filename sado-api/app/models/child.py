@@ -40,8 +40,8 @@ class Child(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    parent: Mapped["User"] = relationship("User", back_populates="children")
-    kindergarten: Mapped["Kindergarten | None"] = relationship(
+    parent: Mapped[User] = relationship("User", back_populates="children")
+    kindergarten: Mapped[Kindergarten | None] = relationship(
         "Kindergarten", back_populates="children"
     )
 

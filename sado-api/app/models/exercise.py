@@ -135,8 +135,8 @@ class Exercise(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
 
-    created_by: Mapped["User | None"] = relationship("User", lazy="joined")
-    assignments: Mapped[list["ExerciseAssignment"]] = relationship(
+    created_by: Mapped[User | None] = relationship("User", lazy="joined")
+    assignments: Mapped[list[ExerciseAssignment]] = relationship(
         "ExerciseAssignment",
         back_populates="exercise",
         cascade="all, delete-orphan",
@@ -194,11 +194,11 @@ class ExerciseAssignment(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    child: Mapped["Child"] = relationship("Child", lazy="joined")
-    exercise: Mapped["Exercise"] = relationship(
+    child: Mapped[Child] = relationship("Child", lazy="joined")
+    exercise: Mapped[Exercise] = relationship(
         "Exercise", back_populates="assignments", lazy="joined"
     )
-    assigned_by: Mapped["User | None"] = relationship("User", lazy="joined")
+    assigned_by: Mapped[User | None] = relationship("User", lazy="joined")
 
     def __repr__(self) -> str:  # pragma: no cover - debug only
         return (

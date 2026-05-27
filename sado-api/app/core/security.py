@@ -16,7 +16,7 @@ JWT helpers produce two token types:
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any, Literal
 
@@ -77,7 +77,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _expiry_for(token_type: TokenType) -> datetime:

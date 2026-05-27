@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter
@@ -63,7 +63,7 @@ async def health() -> HealthResponse:
         service=settings.app_name,
         version=__version__,
         environment=settings.app_env,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )
 
 
@@ -78,8 +78,8 @@ async def _check_database(settings: Settings) -> ServiceStatus:
     started = time.perf_counter()
     try:
         # Local import keeps health endpoint cheap when DB layer is absent.
-        from sqlalchemy.ext.asyncio import create_async_engine
         from sqlalchemy import text
+        from sqlalchemy.ext.asyncio import create_async_engine
 
         engine = create_async_engine(settings.database_url, future=True)
         try:
@@ -205,6 +205,6 @@ async def health_detailed() -> DetailedHealthResponse:
         service=settings.app_name,
         version=__version__,
         environment=settings.app_env,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         services=list(services),
     )
