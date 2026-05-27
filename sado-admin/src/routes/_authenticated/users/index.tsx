@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -54,7 +54,13 @@ function UsersPage() {
       columnHelper.accessor("full_name", {
         header: () => t("users.name"),
         cell: (info) => (
-          <span className="font-medium">{info.getValue() || "—"}</span>
+          <Link
+            to="/users/$userId"
+            params={{ userId: info.row.original.id }}
+            className="font-medium text-brand-700 hover:text-brand-900 hover:underline dark:text-brand-200"
+          >
+            {info.getValue() || "—"}
+          </Link>
         ),
       }),
       columnHelper.accessor("email", {

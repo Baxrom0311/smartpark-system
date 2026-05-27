@@ -52,6 +52,7 @@
     "edit": "Tahrirlash",
     "create": "Yaratish",
     "search": "Qidirish",
+    "back": "Orqaga",
     "empty": "Hech narsa topilmadi"
   },
   "theme": {
@@ -94,6 +95,22 @@
       "teacher": "Tarbiyachilar",
       "therapist": "Logopedlar",
       "admin": "Adminlar"
+    },
+    "detail": {
+      "subtitle": "Foydalanuvchi ma'lumotlari va sozlamalari",
+      "summary": "Profil",
+      "summaryDesc": "Tizimdagi foydalanuvchi haqidagi asosiy ma'lumotlar",
+      "editTitle": "Profilni tahrirlash",
+      "editSelfDesc": "Siz o'zingizning profilingizni o'zgartirayapsiz",
+      "editOtherDesc": "Boshqa foydalanuvchining profilini admin tahrirlay olmaydi. Siz faqat holatni o'zgartira olasiz.",
+      "verified": "Tasdiqlangan",
+      "yes": "Ha",
+      "no": "Yo'q",
+      "updatedAt": "O'zgartirilgan",
+      "activate": "Faollashtirish",
+      "deactivate": "O'chirish",
+      "cannotSelfDeactivate": "O'z hisobingizni o'chira olmaysiz",
+      "notFound": "Foydalanuvchi topilmadi"
     }
   },
   "children": {
