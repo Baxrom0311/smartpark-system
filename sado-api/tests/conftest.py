@@ -10,6 +10,7 @@ import os
 from collections.abc import AsyncIterator, Iterator
 
 import pytest
+import pytest_asyncio
 
 # Set test-friendly defaults BEFORE the app module is imported. Settings
 # are cached via lru_cache so this must happen at import time.
@@ -35,7 +36,7 @@ def app():
     return create_app()
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def client(app) -> AsyncIterator:
     """Async HTTP client wired to the in-process FastAPI app."""
 

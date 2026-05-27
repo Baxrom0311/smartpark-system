@@ -6,24 +6,25 @@ logs_dir = ".agentloop/runs"
 exclude_dirs = ["node_modules", ".expo", "__pycache__", ".venv"]
 snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/", "\\.expo/", "dist/", "build/"]
 
-# Parallel tests for each sub-project
+# Parallel tests for each sub-project. Each command bootstraps its own
+# isolated environment so the reviewer can verify a fresh checkout.
 [[project.tests]]
 name = "backend"
-command = "cd sado-api && python -m pytest -q --tb=short 2>/dev/null || echo 'TESTS_NOT_READY'"
+command = "cd sado-api && (test -d .venv || python3.12 -m venv .venv) && .venv/bin/pip install --quiet -e \".[dev]\" >/dev/null 2>&1 && .venv/bin/python -m pytest -q --tb=short || echo 'TESTS_NOT_READY'"
 cwd = "."
-timeout_sec = 120
+timeout_sec = 600
 
 [[project.tests]]
 name = "admin"
-command = "cd sado-admin && npm run build 2>/dev/null || echo 'BUILD_NOT_READY'"
+command = "cd sado-admin && (test -d node_modules || npm install --no-audit --no-fund --silent) && npm run build || echo 'BUILD_NOT_READY'"
 cwd = "."
-timeout_sec = 120
+timeout_sec = 600
 
 [[project.tests]]
 name = "mobile"
-command = "cd sado-mobile && npx tsc --noEmit 2>/dev/null || echo 'TYPES_NOT_READY'"
+command = "cd sado-mobile && (test -d node_modules || npm install --no-audit --no-fund --silent) && ./node_modules/.bin/tsc --noEmit || echo 'TYPES_NOT_READY'"
 cwd = "."
-timeout_sec = 120
+timeout_sec = 600
 
 [loop]
 plan_cycles = 5

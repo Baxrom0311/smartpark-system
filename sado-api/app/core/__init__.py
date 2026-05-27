@@ -1,6 +1,24 @@
-"""Core utilities (security, exceptions, middleware).
+"""Core utilities — exceptions, middleware, security, pagination."""
 
-Concrete modules will be added in subsequent milestones (M6: security,
-exceptions, middleware). The package is created early so that imports
-can be wired without circular dependencies.
-"""
+from app.core.exceptions import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    RateLimitError,
+    SadoAPIError,
+    UnauthorizedError,
+    ValidationError,
+)
+from app.core.middleware import RequestIDMiddleware, register_exception_handlers
+
+__all__ = [
+    "ConflictError",
+    "ForbiddenError",
+    "NotFoundError",
+    "RateLimitError",
+    "RequestIDMiddleware",
+    "SadoAPIError",
+    "UnauthorizedError",
+    "ValidationError",
+    "register_exception_handlers",
+]
