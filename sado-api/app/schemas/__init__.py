@@ -24,6 +24,17 @@ from app.schemas.child import (
     ChildPublic,
     ChildUpdate,
 )
+from app.schemas.exercise import (
+    ExerciseAssignmentComplete,
+    ExerciseAssignmentCreate,
+    ExerciseAssignmentPage,
+    ExerciseAssignmentPublic,
+    ExerciseAssignmentUpdate,
+    ExerciseCreate,
+    ExercisePage,
+    ExercisePublic,
+    ExerciseUpdate,
+)
 from app.schemas.kindergarten import (
     KindergartenCreate,
     KindergartenPage,
@@ -53,6 +64,15 @@ __all__ = [
     "ChildPage",
     "ChildPublic",
     "ChildUpdate",
+    "ExerciseAssignmentComplete",
+    "ExerciseAssignmentCreate",
+    "ExerciseAssignmentPage",
+    "ExerciseAssignmentPublic",
+    "ExerciseAssignmentUpdate",
+    "ExerciseCreate",
+    "ExercisePage",
+    "ExercisePublic",
+    "ExerciseUpdate",
     "KindergartenCreate",
     "KindergartenPage",
     "KindergartenPublic",

@@ -16,6 +16,14 @@ from app.models.assessment import (
     RiskLevel,
 )
 from app.models.child import Child
+from app.models.exercise import (
+    AssignmentStatus,
+    Exercise,
+    ExerciseAgeGroup,
+    ExerciseAssignment,
+    ExerciseCategory,
+    ExerciseDifficulty,
+)
 from app.models.kindergarten import Kindergarten
 from app.models.region import Region, RegionType
 from app.models.user import User, UserLanguage, UserRole
@@ -25,8 +33,14 @@ __all__ = [
     "Assessment",
     "AssessmentStatus",
     "AssessmentType",
+    "AssignmentStatus",
     "AudioRecording",
     "Child",
+    "Exercise",
+    "ExerciseAgeGroup",
+    "ExerciseAssignment",
+    "ExerciseCategory",
+    "ExerciseDifficulty",
     "Kindergarten",
     "RecordingTaskType",
     "Region",
