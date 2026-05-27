@@ -13,12 +13,12 @@ from app.schemas.auth import (
     TokenPair,
 )
 from app.schemas.user import UserPublic
-from app.services.auth import AuthService
+from app.services.auth import AuthService, IssuedTokens
 
 router = APIRouter()
 
 
-def _to_pair(tokens) -> TokenPair:  # type: ignore[no-untyped-def]
+def _to_pair(tokens: IssuedTokens) -> TokenPair:
     return TokenPair(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,

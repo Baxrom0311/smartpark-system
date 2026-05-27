@@ -10,7 +10,7 @@ snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__
 # isolated environment so the reviewer can verify a fresh checkout.
 [[project.tests]]
 name = "backend"
-command = "cd sado-api && (test -d .venv || python3.12 -m venv .venv) && .venv/bin/pip install --quiet -e \".[dev]\" >/dev/null 2>&1 && .venv/bin/python -m pytest -q --tb=short || echo 'TESTS_NOT_READY'"
+command = "cd sado-api && (test -d .venv || python3.12 -m venv .venv) && .venv/bin/pip install --quiet -e \".[dev]\" >/dev/null 2>&1 && .venv/bin/python -m pytest --tb=short --cov=app --cov-report=term-missing --cov-fail-under=80"
 cwd = "."
 timeout_sec = 600
 
