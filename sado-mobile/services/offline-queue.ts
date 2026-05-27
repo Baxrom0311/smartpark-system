@@ -42,6 +42,15 @@ export interface OfflineRecordingPayload {
   prompt: string | null;
   /** Optional UI hint (child name, prompt label) for surfacing in lists. */
   label: string | null;
+  /** Total file size in bytes — required for resumable session tracking. */
+  sizeBytes?: number | null;
+  /**
+   * Stable upload-session id for chunked/resumable uploads. Present
+   * when the file exceeded `CHUNK_THRESHOLD_BYTES` and a session was
+   * registered via `services/chunked-upload`. The flush callback uses
+   * it as an `X-Upload-Session` idempotency key.
+   */
+  sessionId?: string | null;
 }
 
 export interface OfflineRecordingItem {

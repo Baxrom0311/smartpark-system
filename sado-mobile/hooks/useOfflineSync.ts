@@ -60,6 +60,8 @@ async function defaultUpload(payload: OfflineRecordingPayload): Promise<void> {
     contentType: payload.contentType,
     durationSec: payload.durationSec,
     prompt: payload.prompt,
+    sizeBytes: payload.sizeBytes ?? null,
+    sessionId: payload.sessionId ?? null,
   });
 }
 

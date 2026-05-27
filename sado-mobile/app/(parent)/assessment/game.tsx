@@ -81,6 +81,7 @@ export default function AssessmentGameScreen(): React.ReactElement {
           durationSec: recorder.result.durationSec,
           taskType: currentPrompt.taskType,
           prompt: currentPrompt.prompt,
+          sizeBytes: recorder.result.sizeBytes,
         },
         { label: currentPrompt.prompt },
       );

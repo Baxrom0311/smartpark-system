@@ -11,6 +11,14 @@ import { Platform } from "react-native";
 
 import { ApiError, apiClient } from "@/services/api";
 import {
+  createSession,
+  loadSession,
+  recordFailure as recordSessionFailure,
+  removeSession,
+  shouldChunk,
+  type UploadSession,
+} from "@/services/chunked-upload";
+import {
   enqueue as enqueueOffline,
   type OfflineRecordingItem,
 } from "@/services/offline-queue";
@@ -67,6 +75,49 @@ export interface UploadRecordingInput {
   /** Client-measured duration in seconds. */
   durationSec: number;
   prompt?: string | null;
+  /**
+   * Total file size in bytes. When omitted (legacy callers) the
+   * resumable session is skipped — small files go straight through
+   * as a single multipart POST.
+   */
+  sizeBytes?: number | null;
+  /**
+   * Reuse an existing chunked-upload session id (e.g. when the
+   * offline queue retries an already-planned upload). When omitted a
+   * new session is created for files larger than
+   * `CHUNK_THRESHOLD_BYTES`.
+   */
+  sessionId?: string | null;
+}
+
+/**
+ * Ensure a chunked-upload session exists for large files. Returns
+ * `null` for files below the threshold so callers can keep the
+ * single-shot upload path. The function never throws on AsyncStorage
+ * problems — failing to persist the session must not block the user
+ * from uploading.
+ */
+async function ensureSession(
+  input: UploadRecordingInput,
+): Promise<UploadSession | null> {
+  const totalBytes = input.sizeBytes ?? 0;
+  if (!shouldChunk(totalBytes)) return null;
+
+  try {
+    if (input.sessionId) {
+      const existing = await loadSession(input.sessionId);
+      if (existing) return existing;
+    }
+    return await createSession({
+      fileUri: input.fileUri,
+      contentType: input.contentType,
+      totalBytes,
+      preferredId: input.sessionId ?? undefined,
+    });
+  } catch (error) {
+    console.warn("[assessments] ensureSession failed", error);
+    return null;
+  }
 }
 
 /**
@@ -115,13 +166,43 @@ export async function uploadRecording(
     formData.append("prompt", input.prompt);
   }
 
-  return apiClient.request<AudioRecording>(
-    `/assessments/${encodeURIComponent(input.assessmentId)}/recordings`,
-    {
-      method: "POST",
-      formData,
-    },
-  );
+  const session = await ensureSession(input);
+
+  // Idempotency headers are best-effort metadata. The server is free
+  // to ignore them today; when the chunked endpoint lands they let
+  // the API dedupe retries of the same recording without changing the
+  // multipart contract.
+  const headers: Record<string, string> = {};
+  if (session) {
+    headers["X-Upload-Session"] = session.id;
+    headers["X-Upload-Total-Bytes"] = String(session.totalBytes);
+    headers["X-Upload-Chunk-Size"] = String(session.chunkSize);
+    headers["X-Upload-Chunk-Count"] = String(session.chunks.length);
+  }
+
+  try {
+    const recording = await apiClient.request<AudioRecording>(
+      `/assessments/${encodeURIComponent(input.assessmentId)}/recordings`,
+      {
+        method: "POST",
+        formData,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+      },
+    );
+    if (session) {
+      // Successful upload — discard the resumable session.
+      await removeSession(session.id).catch(() => {
+        // Cleanup failure is non-fatal; the session row is harmless.
+      });
+    }
+    return recording;
+  } catch (error) {
+    if (session) {
+      const message = error instanceof Error ? error.message : String(error);
+      await recordSessionFailure(session.id, message).catch(() => undefined);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -171,13 +252,41 @@ function isOfflineFailure(error: unknown): boolean {
  *
  * Non-network errors (validation, auth, server bugs) re-throw —
  * those are surfaced to the user and not retried.
+ *
+ * For files larger than `CHUNK_THRESHOLD_BYTES` a resumable upload
+ * session is registered up-front (see `services/chunked-upload`).
+ * The session id is persisted alongside the queue payload so the
+ * next flush keeps the same idempotency key.
  */
 export async function uploadOrQueueRecording(
   input: UploadRecordingInput,
   options: { label?: string | null } = {},
 ): Promise<UploadOrQueueResult> {
+  // Pre-register a session for large files so we have a stable
+  // idempotency key for both the immediate upload and any retry that
+  // happens after we fall back to the queue.
+  let sessionId = input.sessionId ?? null;
+  if (sessionId == null && shouldChunk(input.sizeBytes ?? 0)) {
+    try {
+      const created = await createSession({
+        fileUri: input.fileUri,
+        contentType: input.contentType,
+        totalBytes: input.sizeBytes ?? 0,
+      });
+      sessionId = created.id;
+    } catch (error) {
+      // Session persistence is best-effort — fall back to a non-resumable
+      // upload rather than blocking the user.
+      console.warn("[assessments] createSession failed", error);
+    }
+  }
+
+  const inputWithSession: UploadRecordingInput = sessionId
+    ? { ...input, sessionId }
+    : input;
+
   try {
-    const recording = await uploadRecording(input);
+    const recording = await uploadRecording(inputWithSession);
     return { status: "uploaded", recording };
   } catch (error) {
     if (!isOfflineFailure(error)) {
@@ -191,6 +300,8 @@ export async function uploadOrQueueRecording(
       durationSec: input.durationSec,
       prompt: input.prompt ?? null,
       label: options.label ?? null,
+      sizeBytes: input.sizeBytes ?? null,
+      sessionId,
     });
     return { status: "queued", queueItem };
   }
