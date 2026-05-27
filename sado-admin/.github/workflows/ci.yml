@@ -1,0 +1,58 @@
+name: sado-admin CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+      - "!README.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sado-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build / typecheck / test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.18.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Generate routes
+        run: npm run generate:routes
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Tests (vitest)
+        run: npm test
+
+      - name: Build (vite)
+        run: npx tsc -b && npx vite build
+
+      - name: Upload build artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sado-admin-dist
+          path: dist
+          retention-days: 7
+          if-no-files-found: error

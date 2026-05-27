@@ -17,6 +17,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiClientError } from "@/lib/api-client";
+import {
+  loginEmailSchema as emailSchema,
+  loginPhoneSchema as phoneSchema,
+  type LoginFormValues,
+} from "@/lib/validation/login";
 import { useAuthStore } from "@/stores/auth-store";
 
 const loginSearchSchema = z.object({
@@ -33,25 +38,6 @@ export const Route = createFileRoute("/login")({
   },
   component: LoginPage,
 });
-
-const emailSchema = z.object({
-  mode: z.literal("email"),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-const phoneSchema = z.object({
-  mode: z.literal("phone"),
-  phone: z
-    .string()
-    .min(8)
-    .regex(/^\+?[0-9\s-]{8,20}$/, "Invalid phone"),
-  password: z.string().min(8),
-});
-
-type LoginFormValues =
-  | z.infer<typeof emailSchema>
-  | z.infer<typeof phoneSchema>;
 
 function LoginPage() {
   const { t } = useTranslation();
