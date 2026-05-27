@@ -29,7 +29,11 @@
   },
   "dashboard": {
     "title": "Обзор",
+    "subtitle": "Состояние системы и ключевые показатели в реальном времени",
     "totalChildren": "Всего детей",
+    "totalUsers": "Всего пользователей",
+    "totalKindergartens": "Всего садов",
+    "completedAssessments": "Завершённые тесты",
     "assessmentsToday": "Тестов сегодня",
     "redRiskPct": "% высокого риска",
     "activeTherapists": "Активные терапевты",
@@ -39,6 +43,7 @@
   },
   "common": {
     "loading": "Загрузка...",
+    "loadMore": "Загрузить ещё",
     "error": "Произошла ошибка",
     "retry": "Повторить",
     "save": "Сохранить",
@@ -66,5 +71,112 @@
     "notFound": "Не найдено",
     "validation": "Ошибка в введённых данных",
     "server": "Ошибка сервера"
+  },
+  "users": {
+    "description": "Управление пользователями системы",
+    "name": "Имя",
+    "role": "Роль",
+    "status": "Статус",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "createdAt": "Создан",
+    "searchPlaceholder": "Поиск по имени, почте, телефону...",
+    "empty": "Пользователи не найдены",
+    "roles": {
+      "parent": "Родитель",
+      "teacher": "Воспитатель",
+      "therapist": "Логопед",
+      "admin": "Администратор"
+    },
+    "filters": {
+      "all": "Все",
+      "parent": "Родители",
+      "teacher": "Воспитатели",
+      "therapist": "Логопеды",
+      "admin": "Админы"
+    }
+  },
+  "children": {
+    "description": "Зарегистрированные в системе дети",
+    "name": "Имя",
+    "birthDate": "Дата рождения",
+    "age": "Возраст",
+    "ageYears_one": "{{count}} год",
+    "ageYears_few": "{{count}} года",
+    "ageYears_many": "{{count}} лет",
+    "ageYears_other": "{{count}} лет",
+    "gender": "Пол",
+    "language": "Язык",
+    "kindergarten": "Сад",
+    "searchPlaceholder": "Поиск по имени...",
+    "empty": "Дети не найдены",
+    "genders": {
+      "male": "Мальчик",
+      "female": "Девочка",
+      "unknown": "Не указан"
+    }
+  },
+  "kindergartens": {
+    "description": "Детские сады и их показатели",
+    "name": "Название",
+    "address": "Адрес",
+    "phone": "Телефон",
+    "teachers": "Воспитатели",
+    "children": "Дети",
+    "region": "Регион",
+    "searchPlaceholder": "Поиск по названию...",
+    "empty": "Сады не найдены"
+  },
+  "exercises": {
+    "description": "Каталог упражнений",
+    "title": "Название",
+    "category": "Категория",
+    "ageGroup": "Возрастная группа",
+    "difficulty": "Сложность",
+    "duration": "Длительность",
+    "minutes_one": "{{count}} минута",
+    "minutes_few": "{{count}} минуты",
+    "minutes_many": "{{count}} минут",
+    "minutes_other": "{{count}} минут",
+    "searchPlaceholder": "Поиск по названию...",
+    "empty": "Упражнения не найдены",
+    "allCategories": "Все категории",
+    "categories": {
+      "articulation": "Артикуляция",
+      "phonology": "Фонология",
+      "fluency": "Беглость",
+      "voice": "Голос",
+      "language": "Язык",
+      "pragmatics": "Прагматика"
+    },
+    "ageGroups": {
+      "toddler": "2-3 года",
+      "preschool": "4-6 лет",
+      "school": "7-12 лет"
+    },
+    "difficulties": {
+      "easy": "Лёгко",
+      "medium": "Средне",
+      "hard": "Сложно"
+    }
+  },
+  "statistics": {
+    "title": "Региональная статистика",
+    "description": "Распределение рисков по регионам и садам",
+    "byRegion": "По регионам",
+    "byRegionDesc": "Уровни риска для каждого региона",
+    "kindergartensTable": "Рейтинг садов",
+    "kindergartensTableDesc": "Распределение по садам",
+    "assessments": "Тесты"
+  },
+  "settings": {
+    "description": "Настройки профиля и оформления",
+    "profile": "Профиль",
+    "profileDesc": "Обновите ваши личные данные",
+    "fullName": "Полное имя",
+    "language": "Выберите язык",
+    "appearance": "Оформление",
+    "appearanceDesc": "Выберите режим темы",
+    "saved": "Сохранено"
   }
 }

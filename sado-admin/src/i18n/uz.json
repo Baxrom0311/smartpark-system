@@ -29,7 +29,11 @@
   },
   "dashboard": {
     "title": "Umumiy ko'rinish",
+    "subtitle": "Tizimning real vaqtdagi holati va asosiy ko'rsatkichlari",
     "totalChildren": "Jami bolalar",
+    "totalUsers": "Jami foydalanuvchilar",
+    "totalKindergartens": "Jami bog'chalar",
+    "completedAssessments": "Tugatilgan baholashlar",
     "assessmentsToday": "Bugungi baholashlar",
     "redRiskPct": "Yuqori xavf %",
     "activeTherapists": "Faol terapevtlar",
@@ -39,6 +43,7 @@
   },
   "common": {
     "loading": "Yuklanmoqda...",
+    "loadMore": "Ko'proq yuklash",
     "error": "Xatolik yuz berdi",
     "retry": "Qayta urinish",
     "save": "Saqlash",
@@ -66,5 +71,108 @@
     "notFound": "Topilmadi",
     "validation": "Kiritilgan ma'lumotlarda xatolik bor",
     "server": "Serverda xatolik yuz berdi"
+  },
+  "users": {
+    "description": "Tizim foydalanuvchilarini boshqarish",
+    "name": "Ism",
+    "role": "Rol",
+    "status": "Holat",
+    "active": "Faol",
+    "inactive": "Faol emas",
+    "createdAt": "Yaratilgan",
+    "searchPlaceholder": "Ism, pochta yoki telefon bo'yicha qidirish...",
+    "empty": "Foydalanuvchilar topilmadi",
+    "roles": {
+      "parent": "Ota-ona",
+      "teacher": "Tarbiyachi",
+      "therapist": "Logoped",
+      "admin": "Administrator"
+    },
+    "filters": {
+      "all": "Hammasi",
+      "parent": "Ota-onalar",
+      "teacher": "Tarbiyachilar",
+      "therapist": "Logopedlar",
+      "admin": "Adminlar"
+    }
+  },
+  "children": {
+    "description": "Tizimda ro'yxatga olingan bolalar",
+    "name": "Ism",
+    "birthDate": "Tug'ilgan sanasi",
+    "age": "Yoshi",
+    "ageYears_one": "{{count}} yosh",
+    "ageYears_other": "{{count}} yosh",
+    "gender": "Jinsi",
+    "language": "Til",
+    "kindergarten": "Bog'cha",
+    "searchPlaceholder": "Ism bo'yicha qidirish...",
+    "empty": "Bolalar topilmadi",
+    "genders": {
+      "male": "O'g'il bola",
+      "female": "Qiz bola",
+      "unknown": "Ko'rsatilmagan"
+    }
+  },
+  "kindergartens": {
+    "description": "Bog'chalar va ularning ko'rsatkichlari",
+    "name": "Nomi",
+    "address": "Manzil",
+    "phone": "Telefon",
+    "teachers": "Tarbiyachilar",
+    "children": "Bolalar",
+    "region": "Hudud",
+    "searchPlaceholder": "Nom bo'yicha qidirish...",
+    "empty": "Bog'chalar topilmadi"
+  },
+  "exercises": {
+    "description": "Mashqlar kataloglari va sozlamalari",
+    "title": "Sarlavha",
+    "category": "Toifa",
+    "ageGroup": "Yosh guruhi",
+    "difficulty": "Qiyinligi",
+    "duration": "Davomiyligi",
+    "minutes_one": "{{count}} daqiqa",
+    "minutes_other": "{{count}} daqiqa",
+    "searchPlaceholder": "Sarlavha bo'yicha qidirish...",
+    "empty": "Mashqlar topilmadi",
+    "allCategories": "Barcha toifalar",
+    "categories": {
+      "articulation": "Artikulyatsiya",
+      "phonology": "Fonologiya",
+      "fluency": "Ravonlik",
+      "voice": "Ovoz",
+      "language": "Til",
+      "pragmatics": "Pragmatika"
+    },
+    "ageGroups": {
+      "toddler": "2-3 yosh",
+      "preschool": "4-6 yosh",
+      "school": "7-12 yosh"
+    },
+    "difficulties": {
+      "easy": "Oson",
+      "medium": "O'rta",
+      "hard": "Qiyin"
+    }
+  },
+  "statistics": {
+    "title": "Hududiy statistika",
+    "description": "Hududlar va bog'chalar bo'yicha xavf taqsimoti",
+    "byRegion": "Hududlar bo'yicha",
+    "byRegionDesc": "Har bir hudud uchun xavf darajalari",
+    "kindergartensTable": "Bog'chalar reytingi",
+    "kindergartensTableDesc": "Bog'chalar bo'yicha taqsimot",
+    "assessments": "Baholashlar"
+  },
+  "settings": {
+    "description": "Profil va ko'rinish sozlamalari",
+    "profile": "Profil",
+    "profileDesc": "Shaxsiy ma'lumotlaringizni yangilang",
+    "fullName": "To'liq ism",
+    "language": "Tilni tanlang",
+    "appearance": "Ko'rinish",
+    "appearanceDesc": "Mavzu rejimini tanlang",
+    "saved": "Saqlandi"
   }
 }

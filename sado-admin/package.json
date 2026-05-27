@@ -6,9 +6,10 @@
   "description": "SADO admin dashboard — React 19 + TypeScript + Vite 7",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "generate:routes": "node scripts/generate-routes.mjs",
+    "build": "npm run generate:routes && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run generate:routes && tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "test": "vitest run"
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.2.0",
+    "@tanstack/router-generator": "1.95.0",
     "@tanstack/router-plugin": "1.95.0",
     "@types/node": "22.7.5",
     "@types/react": "19.0.0",

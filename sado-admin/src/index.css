@@ -11,6 +11,7 @@
   --color-brand-700: oklch(0.42 0.16 250);
   --color-brand-800: oklch(0.34 0.12 250);
   --color-brand-900: oklch(0.26 0.08 250);
+  --color-brand-950: oklch(0.18 0.06 250);
 
   --color-risk-green: oklch(0.7 0.18 145);
   --color-risk-yellow: oklch(0.82 0.17 90);

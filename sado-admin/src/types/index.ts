@@ -49,29 +49,44 @@ export interface ApiError {
 export interface CursorPage<T> {
   items: T[];
   next_cursor: string | null;
+  has_more: boolean;
   total: number | null;
 }
 
 export interface Child {
   id: string;
-  parent_id: string;
   name: string;
   birth_date: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female" | "unknown";
   language: UserLanguage;
+  notes: string | null;
+  parent_id: string;
   kindergarten_id: string | null;
   created_at: string;
   updated_at: string;
+  age_years: number;
 }
 
 export interface Kindergarten {
   id: string;
   name: string;
-  region_id: string | null;
   address: string | null;
+  phone: string | null;
   teacher_count: number;
   child_count: number;
+  region_id: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface KindergartenStats {
+  kindergarten_id: string;
+  name: string;
+  total_children: number;
+  risk_green: number;
+  risk_yellow: number;
+  risk_red: number;
+  assessed_children: number;
 }
 
 export interface Region {
@@ -83,15 +98,21 @@ export interface Region {
 
 export interface Exercise {
   id: string;
+  title: string;
+  description: string | null;
   category: string;
   age_group: string;
-  difficulty: number;
+  difficulty: string;
   language: UserLanguage;
-  title: string;
-  description: string;
+  duration_minutes: number;
   audio_example_path: string | null;
   image_path: string | null;
+  instructions: string | null;
+  target_phonemes: string | null;
+  is_active: boolean;
+  created_by_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Assessment {
@@ -105,15 +126,62 @@ export interface Assessment {
   completed_at: string | null;
 }
 
+export interface RiskDistribution {
+  green: number;
+  yellow: number;
+  red: number;
+  unknown: number;
+}
+
+export interface DailyAssessmentPoint {
+  date: string;
+  count: number;
+}
+
+export interface RolePopulation {
+  parent: number;
+  teacher: number;
+  therapist: number;
+  admin: number;
+}
+
 export interface SystemStats {
-  total_users: number;
   total_children: number;
+  total_users: number;
+  total_kindergartens: number;
+  total_regions: number;
   total_assessments: number;
+  completed_assessments: number;
   assessments_today: number;
-  red_risk_pct: number;
-  yellow_risk_pct: number;
-  green_risk_pct: number;
   active_therapists: number;
-  active_kindergartens: number;
-  weekly_assessments: Array<{ date: string; count: number }>;
+  red_risk_percentage: number;
+  risk_distribution: RiskDistribution;
+  user_roles: RolePopulation;
+  weekly_assessments: DailyAssessmentPoint[];
+}
+
+export interface RegionStat {
+  region_id: string | null;
+  region_name: string;
+  children: number;
+  assessments: number;
+  risk_distribution: RiskDistribution;
+}
+
+export interface KindergartenStatRow {
+  kindergarten_id: string;
+  name: string;
+  region_id: string | null;
+  region_name: string | null;
+  child_count: number;
+  assessments: number;
+  red_count: number;
+  yellow_count: number;
+  green_count: number;
+}
+
+export interface RegionalStats {
+  regions: RegionStat[];
+  kindergartens: KindergartenStatRow[];
+  daily_trend: DailyAssessmentPoint[];
 }
