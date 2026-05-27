@@ -64,6 +64,25 @@ sado-mobile/
 Public config goes in `app.json` under `expo.extra`. Secrets (API keys) must
 not be committed — use `.env` + `expo-constants` at runtime.
 
+## Offline architecture
+
+The PROJECT_BRIEF lists WatermelonDB as the long-term local-first store, but
+its native module breaks Expo Go and a custom dev client is out of scope for
+the hosted demo. The current implementation uses an **AsyncStorage-backed
+durable queue** for audio recordings captured while the device is offline:
+
+- `services/offline-queue.ts` — durable JSON queue keyed by recording id,
+  with retry counters and a dead-letter list (`MAX_RETRIES = 5`).
+- `stores/offline-store.ts` — Zustand mirror of pending items + connectivity
+  status for header badges and progress screens.
+- `hooks/useOfflineSync.ts` — hydrates the store, polls `/health` every 20s
+  to detect connectivity, and drains the queue on AppState `active` /
+  online transitions. Tests can inject `upload` and `probe` overrides.
+
+**Migration path:** when WatermelonDB adoption is unblocked, swap the
+storage layer in `services/offline-queue.ts` (replace AsyncStorage I/O with
+WatermelonDB tables); the public API and the hook contract stay stable.
+
 ## License
 
 Proprietary — © SADO Platform.
