@@ -89,6 +89,48 @@ JWT_SECRET=ci-test-secret-please-rotate docker compose config -q
 
 ---
 
+## Demo data
+
+For manual exploration of the dashboard and mobile clients, the
+project ships an idempotent seed script:
+
+```bash
+# Against the default SQLite database
+python -m app.scripts.seed_demo
+
+# Or pointed at the Compose Postgres
+DATABASE_URL=postgresql+asyncpg://sado:sado@localhost:5432/sado \
+    python -m app.scripts.seed_demo
+```
+
+The script creates:
+
+| Entity         | Count | Notes                                            |
+| -------------- | ----- | ------------------------------------------------ |
+| Regions        | 3     | Country + Toshkent + Samarqand                   |
+| Users          | 4     | admin / therapist / teacher / parent             |
+| Kindergartens  | 1     | MTM № 1 — Toshkent                               |
+| Children       | 2     | Registered to the parent                         |
+| Exercises      | 6     | Across 6 categories, all in Uzbek                |
+| Assessments    | 2     | Each with one recording + analysis (mock data)   |
+| Notifications  | 3     | Pre-populated inbox for parent + therapist       |
+
+Every demo account uses the password **`demo1234`**:
+
+| Role      | Email                |
+| --------- | -------------------- |
+| admin     | `admin@sado.uz`      |
+| therapist | `therapist@sado.uz`  |
+| teacher   | `teacher@sado.uz`    |
+| parent    | `parent@sado.uz`     |
+
+**Idempotency.** The script uses deterministic UUIDv5 identifiers so
+re-running it never duplicates rows and never wipes manual edits — it
+inserts only what is missing. Running `seed_demo` ten times leaves the
+database in the same state as running it once.
+
+---
+
 ## Layout
 
 ```
