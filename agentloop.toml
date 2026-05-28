@@ -6,41 +6,28 @@ logs_dir = ".agentloop/runs"
 exclude_dirs = ["node_modules", ".expo", "__pycache__", ".venv"]
 snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/", "\\.expo/", "dist/", "build/"]
 
-# Parallel tests for each sub-project. Each command bootstraps its own
-# isolated environment so the reviewer can verify a fresh checkout.
-[[project.tests]]
-name = "backend"
-command = "cd sado-api && (test -d .venv || python3.12 -m venv .venv) && .venv/bin/pip install --quiet -e \".[dev]\" >/dev/null 2>&1 && .venv/bin/python -m pytest --tb=short --cov=app --cov-report=term-missing --cov-fail-under=80"
-cwd = "."
-timeout_sec = 600
-
-[[project.tests]]
-name = "admin"
-command = "cd sado-admin && (test -d node_modules || npm install --no-audit --no-fund --silent) && npm run build || echo 'BUILD_NOT_READY'"
-cwd = "."
-timeout_sec = 600
-
-[[project.tests]]
-name = "mobile"
-command = "cd sado-mobile && (test -d node_modules || npm install --no-audit --no-fund --silent) && ./node_modules/.bin/tsc --noEmit || echo 'TYPES_NOT_READY'"
-cwd = "."
-timeout_sec = 600
+# Parallel tests — add your project's test commands here
+# [[project.tests]]
+# name = "backend"
+# command = "cd my-api && pytest --tb=short"
+# cwd = "."
+# timeout_sec = 600
 
 [loop]
-plan_cycles = 5
+plan_cycles = 3
 review_cycles = 2
-build_iterations = 12
+build_iterations = 10
 no_change_limit = 2
 sleep_between_rounds_sec = 0
-max_total_builds = 200
+max_total_builds = 50
 max_discovery_rounds = 2
 parallel_review = true
-max_parallel_builders = 6
+max_parallel_builders = 3
 
 [retry]
 max_attempts = 3
 backoff_base = 2
-backoff_max = 30
+backoff_max = 60
 jitter = true
 
 [budget]
@@ -87,11 +74,11 @@ trust_tools = "read,write,grep,shell"
 trust_all_tools = true
 
 [telegram]
-enabled = true
-bot_token = "8860807129:AAF0p6MJbHeARftMYoL1JLcB6nGy2js8Iuw"
-chat_id = "5146421024"
+enabled = false
+bot_token = ""
+chat_id = ""
 
 [git]
-auto_push = true
+auto_push = false
 branch = "main"
-commit_message = "feat(sado): AI orchestrator build iteration"
+commit_message = ""

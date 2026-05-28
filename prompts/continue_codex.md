@@ -1,6 +1,6 @@
 # Continue Building
 
-You were building the SADO platform and got interrupted. Continue from where you left off.
+You were building and got interrupted. Continue from where you left off.
 
 ## Rules
 1. Check what exists in the repo snapshot
@@ -31,11 +31,10 @@ You were building the SADO platform and got interrupted. Continue from where you
 
 ## Output
 
-End with the standard JSON report:
+End with:
 ```json
 {
   "state": "needs_review | complete | blocked",
-  "repo": "sado-api | sado-admin | sado-mobile",
   "summary": "What you changed",
   "files_changed": ["path/to/file"],
   "verification": "Commands run and results",

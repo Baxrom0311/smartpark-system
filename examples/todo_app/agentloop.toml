@@ -1,0 +1,20 @@
+[project]
+path = "."
+brief_file = "PROJECT_BRIEF.md"
+test_command = "cd backend && pytest -q && cd ../frontend && npm run build"
+logs_dir = ".agentloop/runs"
+
+[loop]
+plan_cycles = 2
+review_cycles = 2
+build_iterations = 5
+max_total_builds = 30
+
+[telegram]
+enabled = false
+bot_token = ""
+chat_id = ""
+
+[git]
+auto_push = false
+branch = "main"
