@@ -3,15 +3,20 @@ path = "."
 brief_file = "PROJECT_BRIEF.md"
 test_command = ""
 logs_dir = ".agentloop/runs"
-exclude_dirs = ["node_modules", ".expo", "__pycache__", ".venv"]
-snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/", "\\.expo/", "dist/", "build/"]
+exclude_dirs = ["node_modules", "__pycache__", ".venv", ".gradle", ".pio"]
+snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__pycache__/", "\\.gradle/", "\\.pio/", "build/", "\\.idea/"]
 
-# Parallel tests — add your project's test commands here
-# [[project.tests]]
-# name = "backend"
-# command = "cd my-api && pytest --tb=short"
-# cwd = "."
-# timeout_sec = 600
+[[project.tests]]
+name = "backend"
+command = "cd backend && pip install -r requirements.txt -q && python -m pytest --tb=short -q"
+cwd = "."
+timeout_sec = 300
+
+[[project.tests]]
+name = "firmware_build"
+command = "cd firmware && pio run"
+cwd = "."
+timeout_sec = 120
 
 [loop]
 plan_cycles = 3
@@ -74,11 +79,11 @@ trust_tools = "read,write,grep,shell"
 trust_all_tools = true
 
 [telegram]
-enabled = false
-bot_token = ""
-chat_id = ""
+enabled = true
+bot_token = "${TELEGRAM_BOT_TOKEN}"
+chat_id = "${TELEGRAM_CHAT_ID}"
 
 [git]
-auto_push = false
+auto_push = true
 branch = "main"
-commit_message = ""
+commit_message = "feat(smartpark): AI orchestrator build"
