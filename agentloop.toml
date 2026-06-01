@@ -13,8 +13,8 @@ cwd = "."
 timeout_sec = 300
 
 [[project.tests]]
-name = "firmware_build"
-command = "cd firmware && pio run"
+name = "esp32_build"
+command = "cd esp32 && pio run"
 cwd = "."
 timeout_sec = 120
 
@@ -87,3 +87,18 @@ chat_id = "${TELEGRAM_CHAT_ID}"
 auto_push = true
 branch = "main"
 commit_message = "feat(smartpark): AI orchestrator build"
+
+[[git.sub_repos]]
+path = "esp32"
+remote = "origin"
+branch = "main"
+
+[[git.sub_repos]]
+path = "backend"
+remote = "origin"
+branch = "main"
+
+[[git.sub_repos]]
+path = "android"
+remote = "origin"
+branch = "main"

@@ -221,13 +221,13 @@ CREATE TABLE sensor_logs (
 
 ```
 parking_esp32/
-├── firmware/                 # ESP32 PlatformIO loyihasi
+├── esp32/                    # ESP32 PlatformIO loyihasi (→ github.com/Baxrom0311/smartpark-esp32)
 │   ├── platformio.ini
 │   ├── src/
 │   │   └── main.cpp
 │   └── include/
 │       └── config.h
-├── backend/                  # FastAPI backend
+├── backend/                  # FastAPI backend (→ github.com/Baxrom0311/smartpark-backend)
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── config.py
@@ -241,7 +241,7 @@ parking_esp32/
 │   ├── alembic.ini
 │   ├── requirements.txt
 │   └── Dockerfile
-├── android/                  # Android Jetpack Compose
+├── android/                  # Android Jetpack Compose (→ github.com/Baxrom0311/smartpark-android)
 │   ├── app/
 │   │   └── src/main/java/com/smartpark/
 │   ├── build.gradle.kts

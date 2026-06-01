@@ -1,10 +1,53 @@
+# === Orchestrator ===
 .agentloop/runs/
+
+# === Python ===
 __pycache__/
 *.pyc
-.env
-node_modules/
-dist/
-build/
-*.db
+*.pyo
+*.pyd
+.venv/
 venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# === Env / secrets ===
+.env
+*.env
+!.env.example
+
+# === PlatformIO / ESP32 ===
+.pio/
+.pioenvs/
+.piolibdeps/
+esp32/include/config.h
+
+# === Sub-repos (alohida GitHub repo lari) ===
+esp32/
+backend/
+android/
+
+# === Android / Gradle ===
 .gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/captures/
+*.iml
+
+# === Build artifacts ===
+build/
+dist/
+node_modules/
+*.db
+*.sqlite
+*.sqlite3
+
+# === IDE / OS ===
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

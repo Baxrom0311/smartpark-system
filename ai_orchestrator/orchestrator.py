@@ -438,6 +438,43 @@ def run_shell(name: str, command: str, cwd: Path, timeout_sec: int = 120) -> Com
     return run_command(name, ["bash", "-lc", command], cwd=cwd, timeout_sec=timeout_sec)
 
 
+def push_sub_repos(config: Dict, project_root: Path, commit_msg: str, tg: "TelegramNotifier") -> None:
+    """Push each sub-repo defined in [[git.sub_repos]] independently."""
+    git_cfg = config.get("git", {})
+    sub_repos = git_cfg.get("sub_repos", [])
+    branch = str(git_cfg.get("branch", "main"))
+
+    if sub_repos:
+        for sr in sub_repos:
+            sr_path = project_root / sr["path"]
+            sr_branch = sr.get("branch", branch)
+            if not (sr_path / ".git").exists():
+                continue
+            run_shell("git-add", "git add -A", cwd=sr_path, timeout_sec=60)
+            res = run_shell("git-commit", f'git commit -m "{commit_msg}" --allow-empty', cwd=sr_path, timeout_sec=60)
+            if res.ok or "nothing to commit" in (res.stdout + res.stderr):
+                if "nothing to commit" in (res.stdout + res.stderr):
+                    continue
+                res = run_shell("git-push", f"git push -u origin {sr_branch}", cwd=sr_path, timeout_sec=120)
+                if res.ok:
+                    print(f"    [agentloop] ✅ Pushed {sr['path']} → origin/{sr_branch}")
+                    tg.notify_push(sr_branch, f"{sr['path']}: {commit_msg}", True)
+                else:
+                    print(f"    [agentloop] ⚠️ Push {sr['path']} failed: {res.stderr[:100]}")
+                    tg.notify_push(sr_branch, f"{sr['path']}: {commit_msg}", False)
+    else:
+        # Fallback: push root repo
+        run_shell("git-add", "git add -A", cwd=project_root, timeout_sec=60)
+        res = run_shell("git-commit", f'git commit -m "{commit_msg}"', cwd=project_root, timeout_sec=60)
+        if res.ok:
+            res = run_shell("git-push", f"git push -u origin {branch}", cwd=project_root, timeout_sec=120)
+            if res.ok:
+                print(f"    [agentloop] ✅ Pushed to origin/{branch}")
+                tg.notify_push(branch, commit_msg, True)
+            else:
+                print(f"    [agentloop] ⚠️ Push failed: {res.stderr[:100]}")
+                tg.notify_push(branch, commit_msg, False)
+
 def command_exists(cmd: str) -> bool:
     return shutil.which(cmd) is not None
 
@@ -1159,19 +1196,9 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
                     # Git push after each successful build with changes
                     git_cfg = config.get("git", {})
                     if git_cfg.get("auto_push", False) and no_change_streak == 0:
-                        branch = str(git_cfg.get("branch", "main"))
                         summary = report.get("summary", f"Build #{total_builds}") if report else f"Build #{total_builds}"
                         commit_msg = f"[agentloop] Build #{total_builds}: {summary[:60]}"
-                        run_shell("git-add", "git add -A", cwd=project_root, timeout_sec=60)
-                        res = run_shell("git-commit", f'git commit -m "{commit_msg}"', cwd=project_root, timeout_sec=60)
-                        if res.ok:
-                            res = run_shell("git-push", f"git push -u origin {branch}", cwd=project_root, timeout_sec=120)
-                            if res.ok:
-                                print(f"    [agentloop] ✅ Pushed to origin/{branch}")
-                                tg.notify_push(branch, commit_msg, True)
-                            else:
-                                print(f"    [agentloop] ⚠️ Push failed: {res.stderr[:100]}")
-                                tg.notify_push(branch, commit_msg, False)
+                        push_sub_repos(config, project_root, commit_msg, tg)
 
                 if bi < build_iterations:
                     time.sleep(sleep_sec)
@@ -1411,33 +1438,7 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
         commit_msg = str(git_cfg.get("commit_message", f"[agentloop] Production-ready: {final_reason[:80]}"))
         print(f"\n[agentloop] Pushing to GitHub ({branch})...")
         tg.send(f"📦 *Pushing to GitHub* branch: `{branch}`")
-
-        # git add all changes
-        res = run_shell("git-add", "git add -A", cwd=project_root, timeout_sec=60)
-        if not res.ok:
-            print(f"[agentloop] git add failed: {res.stderr}")
-        else:
-            # git commit
-            res = run_shell(
-                "git-commit",
-                f'git commit -m "{commit_msg}"',
-                cwd=project_root, timeout_sec=60,
-            )
-            if not res.ok and "nothing to commit" not in res.stdout + res.stderr:
-                print(f"[agentloop] git commit failed: {res.stderr}")
-            else:
-                # git push
-                res = run_shell(
-                    "git-push",
-                    f"git push -u origin {branch}",
-                    cwd=project_root, timeout_sec=120,
-                )
-                if res.ok:
-                    print(f"[agentloop] ✅ Pushed to origin/{branch}")
-                    tg.send(f"✅ *Pushed to GitHub* origin/{branch}")
-                else:
-                    print(f"[agentloop] git push failed: {res.stderr}")
-                    tg.send(f"❌ *Push failed*: {res.stderr[:200]}")
+        push_sub_repos(config, project_root, commit_msg, tg)
 
     return 0 if done else 2
 
