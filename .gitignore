@@ -22,10 +22,10 @@ venv/
 .pio/
 .pioenvs/
 .piolibdeps/
-esp32/include/config.h
+firmware/include/config.h
 
 # === Sub-repos (alohida GitHub repo lari) ===
-esp32/
+firmware/
 backend/
 android/
 

@@ -13,8 +13,8 @@ cwd = "."
 timeout_sec = 300
 
 [[project.tests]]
-name = "esp32_build"
-command = "cd esp32 && pio run"
+name = "firmware_build"
+command = "cd firmware && pio run"
 cwd = "."
 timeout_sec = 120
 
@@ -89,7 +89,7 @@ branch = "main"
 commit_message = "feat(smartpark): AI orchestrator build"
 
 [[git.sub_repos]]
-path = "esp32"
+path = "firmware"
 remote = "origin"
 branch = "main"
 
