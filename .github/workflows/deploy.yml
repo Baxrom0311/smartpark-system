@@ -1,0 +1,46 @@
+name: SmartPark Auto Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            echo "=== Deployment boshlandi ==="
+            
+            # 1. Parent repoga o'tib, yangilanishlarni tortish
+            cd /opt/smartpark-system
+            git pull origin main || git pull origin master
+            
+            # 2. Backend repoga o'tib, yangilanishlarni tortish
+            cd /opt/smartpark-system/backend
+            git pull origin main || git pull origin master
+            
+            # 3. Virtual environmentni faollashtirib, kutubxonalarni o'rnatish
+            .venv/bin/pip install -r requirements.txt
+            
+            # 4. Ma'lumotlar bazasi migratsiyalarini ishga tushirish
+            .venv/bin/alembic upgrade head
+            
+            # 5. Systemd xizmatini qayta ishga tushirish
+            systemctl restart smartpark-backend.service
+            
+            # 6. Xizmat holatini tekshirish
+            systemctl status smartpark-backend.service --no-pager
+            
+            echo "=== Deployment muvaffaqiyatli yakunlandi! ==="
