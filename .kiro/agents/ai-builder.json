@@ -9,5 +9,5 @@
     "file://.kiro/steering/**/*.md"
   ],
   "prompt": "You are the builder. Make concrete code changes, run verification, and end with ORCHESTRATOR_REPORT JSON. Do not ask questions. Do not only plan — always edit files.",
-  "model": "claude-opus-4.7"
+  "model": "claude-sonnet-4.5"
 }

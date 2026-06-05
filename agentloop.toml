@@ -8,7 +8,7 @@ snapshot_exclude = ["\\.git/", "\\.agentloop/", "node_modules/", "\\.venv/", "__
 
 [[project.tests]]
 name = "backend"
-command = "cd backend && pip install -r requirements.txt -q && python -m pytest --tb=short -q"
+command = "cd backend && .venv/bin/python -m pytest --tb=short -q"
 cwd = "."
 timeout_sec = 300
 
@@ -17,6 +17,12 @@ name = "firmware_build"
 command = "cd firmware && pio run"
 cwd = "."
 timeout_sec = 120
+
+[[project.tests]]
+name = "android_build"
+command = "cd android && JAVA_HOME=$(/usr/libexec/java_home -v 17 2>/dev/null || echo $JAVA_HOME) ./gradlew --no-daemon :app:assembleDebug"
+cwd = "."
+timeout_sec = 600
 
 [loop]
 plan_cycles = 3
@@ -80,8 +86,8 @@ trust_all_tools = true
 
 [telegram]
 enabled = true
-bot_token = "${TELEGRAM_BOT_TOKEN}"
-chat_id = "${TELEGRAM_CHAT_ID}"
+bot_token = ""
+chat_id = ""
 
 [git]
 auto_push = true

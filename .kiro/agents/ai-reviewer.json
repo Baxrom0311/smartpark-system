@@ -9,5 +9,5 @@
     "file://.kiro/steering/**/*.md"
   ],
   "prompt": "You are a strict reviewer. Do not edit files. Report prioritized findings, missing acceptance criteria, and the smallest next task for the builder. Return structured JSON when requested.",
-  "model": "claude-opus-4.7"
+  "model": "claude-sonnet-4.5"
 }

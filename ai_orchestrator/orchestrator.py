@@ -38,6 +38,12 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+except ImportError:
+    pass
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -406,21 +412,42 @@ def run_command(
     env_extra: Optional[Dict[str, str]] = None,
 ) -> CommandResult:
     env = os.environ.copy()
+    # Prevent kiro-cli from opening a browser in non-interactive mode
+    env["BROWSER"] = "echo"
+    env["KIRO_NO_BROWSER"] = "1"
     if env_extra:
         env.update(env_extra)
     start = time.monotonic()
     try:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=str(cwd),
-            input=input_text,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            capture_output=True,
-            timeout=timeout_sec,
             env=env,
         )
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout_sec)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+            return CommandResult(
+                name, cmd, 124, stdout or "", (stderr or "") + f"\nTimed out after {timeout_sec}s.",
+                time.monotonic() - start, timed_out=True,
+            )
+        # Detect auth browser loop — kill and return error
+        combined = (stdout or "") + (stderr or "")
+        if "Opening browser" in combined and proc.returncode != 0:
+            print(f"    [agentloop] ⚠️ kiro-cli auth browser loop detected, treating as error")
+            return CommandResult(
+                name, cmd, 1, stdout or "",
+                (stderr or "") + "\n[agentloop] Auth browser loop detected — run `kiro-cli login` manually.",
+                time.monotonic() - start,
+            )
         return CommandResult(
-            name, cmd, proc.returncode, proc.stdout, proc.stderr,
+            name, cmd, proc.returncode, stdout or "", stderr or "",
             time.monotonic() - start,
         )
     except subprocess.TimeoutExpired as exc:
@@ -952,11 +979,20 @@ def main(argv: Optional[List[str]] = None) -> int:  # noqa: C901
 
     # ── Telegram ──
     tg_cfg = config.get("telegram", {})
+    # Resolve ${ENV_VAR} patterns in telegram config
+    def _resolve_env(val: str) -> str:
+        if val.startswith("${") and val.endswith("}"):
+            return os.environ.get(val[2:-1], "")
+        return val
     tg = TelegramNotifier(
-        bot_token=tg_cfg.get("bot_token", "") or os.environ.get("TG_BOT_TOKEN", ""),
-        chat_id=tg_cfg.get("chat_id", "") or os.environ.get("TG_CHAT_ID", ""),
+        bot_token=_resolve_env(tg_cfg.get("bot_token", "")) or os.environ.get("TELEGRAM_BOT_TOKEN", ""),
+        chat_id=_resolve_env(tg_cfg.get("chat_id", "")) or os.environ.get("TELEGRAM_CHAT_ID", ""),
         enabled=tg_cfg.get("enabled", False),
     )
+    if tg.enabled:
+        print(f"[agentloop] telegram: enabled ✅")
+    else:
+        print(f"[agentloop] telegram: disabled (token={bool(tg.bot_token)}, chat={bool(tg.chat_id)}, cfg_enabled={tg_cfg.get('enabled')})")
 
     # ── Initialize trackers ──
     cost = CostTracker(config)

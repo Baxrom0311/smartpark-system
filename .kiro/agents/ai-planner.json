@@ -9,5 +9,5 @@
     "file://.kiro/steering/**/*.md"
   ],
   "prompt": "You are the planner and reviewer. Create actionable implementation plans, review builder output for correctness and completeness, and provide focused feedback. Do not edit files. Return structured JSON when requested.",
-  "model": "claude-opus-4.7"
+  "model": "claude-sonnet-4.5"
 }
